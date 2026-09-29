@@ -59,6 +59,36 @@ balconies beyond the posts, and decorative capitals on pilasters.
 - Wave Function Collapse, as used for the skyline: a constraint solver over
   socketed tiles. https://github.com/mxgmn/WaveFunctionCollapse
 
-The truss and plan generators are direct geometry: a Pratt web has verticals
-with diagonals leaning to the centre, a Warren web is a run of triangles; a
-plan is a recursive subdivision with door swings drawn as quarter circles.
+The plan generator is direct geometry: a recursive subdivision with door
+swings drawn as quarter circles.
+
+## Ink references
+
+Two hand-drawn references were read for the `ink` preset: a pen-and-ink
+Victorian corner house and a sketch of a small modern villa.
+
+| Seen in the references | How it is approximated as lines |
+|---|---|
+| Curved bay windows stacked over three floors | A half-ellipse plan polyline of six segments; a pane per segment per floor with its own glow polygon; rings at every floor; corbel brackets under the bay |
+| The rounded corner with windows wrapping round | A quarter-round plan of eight segments between the two first buildings, with floor rings, mullions at every vertex, and an arched entrance in the middle segment |
+| Deep bracketed cornice with dentils | A projecting soffit of 0.8 units with a hatched underside at 0.14-unit spacing, brackets every 0.7 units, and a dentil row set 0.35 units out |
+| Heavy shade under every projection and in the reveals | Parallel line fields: vertical under heads and projections, horizontal on the shaded jamb, with a sun side chosen per seed |
+| Iron fence with finials, gate opposite the door | Posts every unit with a diamond finial, two rails, pickets every 0.25 units, a gap with taller posts at each door |
+| Stoop with cheek walls | Four treads and risers projecting 1.6 units, cheek walls as filled polygons so the steps behind are hidden |
+| Round arches and deep balconies with planters | True arcs projected point by point; foliage as clustered short arcs inside an ellipse, on balconies and in planter boxes |
+
+Not drawn: the wash-like tone of the villa sketch (it is fill, not line), the
+hand-wobble of the ink strokes, and the palm fronds, which at one pixel become
+noise.
+
+## City-block skyline
+
+Three references were read: a dense frontal skyline of towers of many styles,
+a one-point view down an avenue, and a three-point view looking up between
+towers. What they share is that towers are stacks of setback tiers with a
+crown, and that dense horizontal floor lines are what read as glazing. The
+generator lays lots on a grid (or on both sides of an avenue for one-point),
+builds each tower from one to three tiers, picks a crown (spire, dome, mast,
+columned cap, or flat), draws only camera-facing faces with page-colour fills
+far to near, and puts a line at every floor and mullions on glass. The Wave
+Function Collapse solver stays in the library but no longer draws.

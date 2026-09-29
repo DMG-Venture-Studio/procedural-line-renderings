@@ -47,3 +47,16 @@
   --t-4:  calc(var(--t-base) * 3.157);
   --t-5:  calc(var(--t-base) * 4.209);
 }
+
+/* Night theme for the whole page. Set data-theme="night" on <html>. Same cobalt for controls;
+   links and hover use a cobalt tint that stays legible on the dark page. */
+:root[data-theme="night"] {
+  --bg: #0E0E10;
+  --fg: #E8E8E6;
+  --muted: #9A9DA2;
+  --line: #2A2B2F;
+  --surface: #1A1B1D;
+  --accent: #7B8FFF;
+  --accent-strong: #A7B4FF;
+  color-scheme: dark;
+}

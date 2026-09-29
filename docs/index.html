@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Procedural line renderings</title>
-<meta name="description" content="Procedural architectural line drawings as dependency-free Web Components: a street corner through a pinhole camera, an axonometric massing model, a Wave Function Collapse skyline, a truss, and a floor plan, each seeded and plotted in like a pen plotter, with every feature switchable.">
+<meta name="description" content="Procedural architectural line drawings as dependency-free Web Components: a street corner through a pinhole camera, a massing model, a 3D city-block skyline, and a floor plan, each seeded and plotted in like a pen plotter, with every feature switchable and one-, two- or three-point perspective.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=Geist+Mono:wght@400&display=swap">
 <link rel="stylesheet" href="tokens.css">
@@ -16,6 +16,7 @@
   header.top { padding-block: 24px; display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; }
   .brand { font-family: var(--f-display); font-weight: 700; font-size: var(--t-1); letter-spacing: -0.02em; color: var(--fg); text-decoration: none; }
   nav a { color: var(--fg); text-decoration: none; margin-left: 24px; font-weight: 500; }
+  nav button { margin-left: 24px; }
   nav a:hover, a:hover { color: var(--accent-strong); }
   a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; }
   h1 { font-family: var(--f-display); font-size: var(--t-5); letter-spacing: -0.03em; line-height: 0.98; margin: 48px 0 24px; max-width: 14ch; text-wrap: balance; }
@@ -53,49 +54,47 @@
     <a href="#math">The math</a>
     <a href="demo/">Demo</a>
     <a href="https://github.com/DMG-Venture-Studio/procedural-line-renderings">Source</a>
+    <button type="button" data-theme-toggle aria-pressed="false">Night</button>
   </nav>
 </header>
 
 <h1>Architectural line drawings, computed.</h1>
-<p class="lede">Five Web Components that draw a building scene from a seed and plot it in like a pen plotter. Vanilla JS, no dependencies, one colour, one pixel wide. Every feature is a flag.</p>
-<p class="muted">Give an element a box and it fills it. With no seed set, it hashes the clock, so every visit is a sibling. In bounce mode it plots in, holds, plots out, and draws the next one. Night mode inverts the page and can light the windows.</p>
+<p class="lede">Four Web Components that draw a building scene from a seed and plot it in like a pen plotter. Vanilla JS, no dependencies, one colour, one pixel wide. Every feature is a flag; every scene takes a perspective mode through one pinhole camera.</p>
+<p class="muted">Give an element a box and it fills it. With no seed set, it hashes the clock, so every visit is a sibling. In bounce mode it plots in, holds, plots out, and draws the next one. The Night button switches the whole page and every drawing on it, and lights the windows.</p>
 
-<div class="example"><dmg-street-corner></dmg-street-corner></div>
+<div class="example"><dmg-street-corner data-follow-night></dmg-street-corner></div>
 <p class="caption"><code>&lt;dmg-street-corner&gt;</code> with defaults. Reload for another.</p>
 
 <h2 id="use">Use</h2>
-<p>Script tag, no bundler. The file registers all five elements and exposes the generators on <code>window.ProceduralLines</code>.</p>
+<p>Script tag, no bundler. The file registers all four elements and exposes the generators on <code>window.ProceduralLines</code>.</p>
 <pre><code>&lt;script src="procedural-line-renderings.js"&gt;&lt;/script&gt;
 
 &lt;dmg-street-corner style="width: 100%; height: 60vh"&gt;&lt;/dmg-street-corner&gt;
-&lt;dmg-massing seed="42" mode="once"&gt;&lt;/dmg-massing&gt;
-&lt;dmg-skyline night&gt;&lt;/dmg-skyline&gt;
+&lt;dmg-street-corner preset="ink" perspective="3"&gt;&lt;/dmg-street-corner&gt;
+&lt;dmg-massing seed="42" mode="once" perspective="2"&gt;&lt;/dmg-massing&gt;
+&lt;dmg-skyline night perspective="1"&gt;&lt;/dmg-skyline&gt;
 &lt;dmg-street-corner options='{"shutters":true,"pediments":true,"trees":false}' glow="#F2D08A"&gt;&lt;/dmg-street-corner&gt;</code></pre>
 <p>ES modules, from the repository's <code>src/</code>:</p>
 <pre><code>import '@dmg-venture-studio/procedural-line-renderings';
-import { corner4, rng, bounce } from '@dmg-venture-studio/procedural-line-renderings';</code></pre>
+import { corner4, skyline, rng, bounce } from '@dmg-venture-studio/procedural-line-renderings';</code></pre>
 <p>Every playground below writes the exact tag and the equivalent API call for whatever you have switched on. Copy either.</p>
 
 <h2 id="components">Components</h2>
 
 <h3><code>&lt;dmg-street-corner&gt;</code></h3>
-<p>Two rows of buildings meeting at a corner, seen through a pinhole camera. Facades come from a split grammar with five window families, rooftop objects, gaps in the street wall, ornament, and twelve kinds of millwork. The street in front carries a kerb, road dashes, lamp posts, and trees grown by a branching rule. Depth features project from the wall; a back row can stand behind.</p>
+<p>Two rows of buildings meeting at a corner, seen through a pinhole camera. Facades come from a split grammar with five window families, rooftop objects, gaps in the street wall, ornament, and twelve kinds of millwork. The street in front carries a kerb, road dashes, lamp posts, and trees grown by a branching rule. The <code>ink</code> preset adds what a pen-and-ink elevation has: curved bay windows over several floors, a rounded corner with windows wrapping it, a deep bracketed cornice with a hatched soffit, shade hatching in the reveals and under every projection, an iron fence with a gate at each door, stoops with cheek walls, planters with foliage, and round arches. Perspective 2 keeps verticals vertical; 3 pitches the camera up.</p>
 <div data-playground="corner"></div>
 
 <h3><code>&lt;dmg-massing&gt;</code></h3>
-<p>An axonometric massing model: stepped terraces with railings and stairs, towers with floor lines and mullions, courtyard footprints, cantilevers on columns, gable roofs, windows on a floor grid, a drawn site, an exploded view, and a light study in three hatch weights. Hidden lines are removed by painting far to near.</p>
+<p>A massing model: stepped terraces with railings and stairs, towers with floor lines and mullions, courtyard footprints, cantilevers on columns, gable roofs, windows on a floor grid, a drawn site, an exploded view, and a light study in three hatch weights. Axonometric by default; perspective 2 puts the pinhole camera above and outside the cluster, 3 puts it low and pitched up. Hidden lines are removed by painting far to near, and the underside of a raised box appears when the camera stands below it.</p>
 <div data-playground="massing"></div>
 
 <h3><code>&lt;dmg-skyline&gt;</code></h3>
-<p>A street of buildings found by Wave Function Collapse: a grid of socketed tiles collapsed one cell at a time until every shared edge agrees. Sky above roofs, roofs above walls, doors only at street level, streets between buildings. Nothing is placed; the skyline is the only consistent answer.</p>
+<p>A 3D city block. Lots on a grid, or on both sides of an avenue for one-point, each carrying a tower of stacked setback tiers with a crown (spire, dome, mast, columned cap) or a low podium. Only camera-facing faces are drawn, filled far to near, with a line at every floor and mullions on glass, which is what makes a skyline read as glazing in ink. Perspective 1 looks down the avenue, 2 stands at a corner outside the block, 3 stands between towers and looks up.</p>
 <div data-playground="skyline"></div>
 
-<h3><code>&lt;dmg-truss&gt;</code></h3>
-<p>A bridge truss in elevation. A Pratt web has verticals with diagonals leaning to the centre; a Warren web is a run of triangles. Members are double lines, joints carry gusset circles, and piers run down to hatched footings.</p>
-<div data-playground="truss"></div>
-
 <h3><code>&lt;dmg-plan&gt;</code></h3>
-<p>A floor plate split into rooms by recursive subdivision, walls with thickness, a door swing cut into every partition, a window in the outer wall for every room that touches it, hatched wall poche, and one stair.</p>
+<p>A floor plate split into rooms by recursive subdivision, walls with thickness, a door swing cut into every partition, a window in the outer wall for every room that touches it, hatched wall poche, and one stair. It has no windows to light, so it ignores <code>glow</code>.</p>
 <div data-playground="plan"></div>
 
 <h2 id="reference">Reference</h2>
@@ -106,12 +105,14 @@ import { corner4, rng, bounce } from '@dmg-venture-studio/procedural-line-render
   <tr><td><code>seed</code></td><td>integer</td><td>none</td><td>Fixed seed. When absent, a hash of the clock is used.</td></tr>
   <tr><td><code>reseed</code></td><td><code>cycle</code>, <code>never</code></td><td><code>cycle</code></td><td>In bounce mode with no fixed seed, draw a new sibling at the bottom of each cycle.</td></tr>
   <tr><td><code>mode</code></td><td><code>bounce</code>, <code>once</code></td><td><code>bounce</code></td><td>Plot in, hold, plot out, repeat; or plot in once and stop.</td></tr>
+  <tr><td><code>perspective</code></td><td>corner <code>2</code> <code>3</code>; massing <code>0</code> <code>2</code> <code>3</code>; skyline <code>1</code> <code>2</code> <code>3</code></td><td>2, 0, 2</td><td>The camera model, all through one pinhole camera. The corner rejects <code>1</code> with a console warning and falls back to <code>2</code>. Not on the plan.</td></tr>
+  <tr><td><code>preset</code></td><td><code>ink</code></td><td>none</td><td>Street corner only: a named bundle of flags. Flags in <code>options</code> override it.</td></tr>
   <tr><td><code>options</code></td><td>JSON object</td><td>none</td><td>Feature flags for this component, see the tables below. Only the flags you set are needed.</td></tr>
   <tr><td><code>color</code></td><td>CSS colour</td><td><code>#C4C6CB</code>, night <code>#A8AAB0</code></td><td>Stroke colour.</td></tr>
   <tr><td><code>page</code></td><td>CSS colour</td><td><code>#FFFFFF</code>, night <code>#0E0E10</code></td><td>Page colour used for hidden-line fills. Match your background.</td></tr>
-  <tr><td><code>glow</code></td><td>hex colour</td><td>off, night <code>#F2D08A</code></td><td>Light a random subset of windows in this colour with a soft shadow.</td></tr>
-  <tr><td><code>night</code></td><td>boolean</td><td>off</td><td>Dark page, light lines, glowing windows on by default and more of them.</td></tr>
-  <tr><td><code>pitch</code></td><td>boolean</td><td>off</td><td>Street corner shorthand for <code>options='{"pitch":true}'</code>.</td></tr>
+  <tr><td><code>glow</code></td><td>hex colour</td><td>off, night <code>#F2D08A</code></td><td>Light a random subset of windows in this colour with a soft shadow. Ignored by the plan.</td></tr>
+  <tr><td><code>night</code></td><td>boolean</td><td>off</td><td>Dark page, light lines, glowing windows on by default and more of them. The page's Night button sets it on every element that follows the page.</td></tr>
+  <tr><td><code>pitch</code></td><td>boolean</td><td>off</td><td>Street corner shorthand for <code>perspective="3"</code>.</td></tr>
   <tr><td><code>full</code></td><td>boolean</td><td>off</td><td>Street corner shorthand for back row, balconies, awnings, setbacks, close camera.</td></tr>
 </table>
 
@@ -121,7 +122,7 @@ import { corner4, rng, bounce } from '@dmg-venture-studio/procedural-line-render
   <tr><td><code>element.regenerate()</code></td><td>Draws a new sibling from a fresh clock seed.</td></tr>
   <tr><td><code>element.stop()</code></td><td>Halts the animation and leaves the last frame.</td></tr>
   <tr><td><code>element.seed</code></td><td>The seed of the drawing on screen. Setting it redraws.</td></tr>
-  <tr><td><code>element.options</code></td><td>The resolved flags in effect, defaults filled in.</td></tr>
+  <tr><td><code>element.options</code></td><td>The resolved flags and params in effect, defaults filled in.</td></tr>
   <tr><td><code>element.snippet</code></td><td>The HTML tag that reproduces the current state, non-default flags only.</td></tr>
   <tr><td><code>seed</code> event</td><td>Fires on every draw with <code>event.detail.seed</code>.</td></tr>
 </table>
@@ -131,21 +132,22 @@ import { corner4, rng, bounce } from '@dmg-venture-studio/procedural-line-render
 <details class="ref" open><summary>Street corner</summary><table><tr><th>Flag</th><th>Family</th><th>Default</th><th>Meaning</th></tr><tbody data-options="corner"></tbody></table></details>
 <details class="ref"><summary>Massing</summary><table><tr><th>Flag</th><th>Family</th><th>Default</th><th>Meaning</th></tr><tbody data-options="massing"></tbody></table></details>
 <details class="ref"><summary>Skyline</summary><table><tr><th>Flag</th><th>Family</th><th>Default</th><th>Meaning</th></tr><tbody data-options="skyline"></tbody></table></details>
-<details class="ref"><summary>Truss</summary><table><tr><th>Flag</th><th>Family</th><th>Default</th><th>Meaning</th></tr><tbody data-options="truss"></tbody></table></details>
 <details class="ref"><summary>Plan</summary><table><tr><th>Flag</th><th>Family</th><th>Default</th><th>Meaning</th></tr><tbody data-options="plan"></tbody></table></details>
 
 <h3>Sizing and motion</h3>
 <p>The element is <code>display: block</code> with a 240px minimum height. Size it with CSS or a grid cell; it redraws when its box changes. Fixed sizes work for known layouts; for a responsive box set a width and an <code>aspect-ratio</code>. The drawing is fitted to the box, so keep text out of it. The element never measures its siblings.</p>
+<p>Night is two things. <code>night</code> on an element switches that element. The Night button in the header switches the page tokens and every element marked to follow the page, and each playground can still say day or night for itself. The choice is remembered in this browser.</p>
 <p>A cycle plots in over about seven seconds, holds five, plots out over four, and pauses briefly. Under <code>prefers-reduced-motion: reduce</code> the element draws the finished state once and never animates. Glowing windows redraw every frame with a canvas shadow, which costs more on large boxes; prefer <code>mode="once"</code> when many are lit.</p>
 
 <h2 id="math">The math</h2>
-<h3>Projection</h3>
-<p>Projection is real geometry, never faked. The massing uses an axonometric projection, 30 degrees by default or a random dimetric angle, and hides lines with the painter's algorithm: boxes are sorted far to near by the sum of their centre coordinates, and each box fills its visible faces in the page colour before stroking its edges, so nearer boxes erase what they cover. Gable roofs replace the top face with two slopes; exploded views lift boxes and draw dashed guides.</p>
-<p>The street corner uses a pinhole camera with unit focal length standing in the negative quadrant of a 3D street. The result is fitted to the box with a uniform scale and translation. A similarity preserves perspective, so perspective strength comes only from how far the camera stands from the buildings. A pitched camera gives converging verticals. Millwork is drawn in facade coordinates through the same projection, so an architrave or a pediment recedes correctly.</p>
-<h3>Grammar, constraint, and seed</h3>
-<p>Facades come from a split grammar in the tradition of Instant Architecture and CGA shape: a lot becomes a building, a building becomes floors, floors become bays, bays become windows from one of five families, and trim is applied per opening from inside that loop. The skyline is a Wave Function Collapse: each tile has four socket labels and two tiles may touch only when facing sockets match; the lowest-entropy cell collapses first and the constraint propagates.</p>
+<h3>One camera, three perspectives</h3>
+<p>Projection is real geometry, never faked. One-, two- and three-point perspective are the same pinhole camera with unit focal length, placed and aimed differently. Looking straight down an avenue makes every line along it converge on one point. Turning the level camera to a corner gives two points and keeps verticals vertical. Pitching it up adds a third point above the page. The result is fitted to the box with a uniform scale and translation; a similarity preserves perspective, so perspective strength comes only from how far the camera stands from the buildings. The massing keeps a parallel axonometric projection as its default.</p>
+<h3>Hidden lines</h3>
+<p>Every box fills its camera-facing faces in the page colour before stroking its edges, and boxes are drawn far to near, so nearer boxes erase what they cover. Whether a face faces the camera is a dot product of its normal with the direction to the camera; a face below the eye shows its underside. Projecting pieces of a facade, a bay window, a cornice, a stoop, are their own items drawn right after the wall they sit on, with fills, or the wall's lines would show through them. Gable roofs replace the top face with two slopes; exploded views lift boxes and draw dashed guides.</p>
+<h3>Grammar, block, and seed</h3>
+<p>Facades come from a split grammar in the tradition of Instant Architecture and CGA shape: a lot becomes a building, a building becomes floors, floors become bays, bays become windows from one of five families, and trim is applied per opening from inside that loop. The skyline is a city block: lots on a grid, each with a tower of stacked setback tiers and a crown, every visible face carrying a line per floor. Shade in the ink preset is parallel line fields under every projection and in the reveals, with a sun side chosen per seed.</p>
 <p>Everything is a pure function of a 32-bit seed from a mulberry32 generator, so a drawing can be named by its seed and reproduced anywhere. Plotting animates by stroke length: a progress renderer draws the first <em>p</em> pixels of the stroke list each frame, with each item's fills and lit windows appearing as the item starts, so hidden-line removal holds mid-plot.</p>
-<p>The vocabulary and the sources behind the millwork are in <a href="https://github.com/DMG-Venture-Studio/procedural-line-renderings/blob/main/docs/research.md">research.md</a>.</p>
+<p>The vocabulary, the references, and the sources behind the millwork and the ink features are in <a href="https://github.com/DMG-Venture-Studio/procedural-line-renderings/blob/main/docs/research.md">research.md</a>.</p>
 
 <h2 id="agents">For coding agents</h2>
 <p>The repository is a Claude Code plugin. Its skill teaches the math, the composition rules, and how to use these components.</p>
@@ -163,6 +165,7 @@ import { corner4, rng, bounce } from '@dmg-venture-studio/procedural-line-render
 <script>
   document.querySelectorAll('[data-playground]').forEach(function (c) { Playground.mount(c, c.dataset.playground); });
   document.querySelectorAll('[data-options]').forEach(function (t) { Playground.optionsTable(t, t.dataset.options); });
+  Playground.theme();
 </script>
 </body>
 </html>

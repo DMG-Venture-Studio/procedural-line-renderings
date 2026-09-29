@@ -16,28 +16,25 @@
   p { max-width: 62ch; margin: 0 0 8px; color: var(--muted); }
   a { color: var(--accent); }
   nav a { margin-right: 20px; }
+  nav button { margin-left: 4px; }
 </style>
 </head>
 <body>
   <h1>Procedural line renderings</h1>
-  <p>Every flag, size, and colour of every component, with the tag and the API call that reproduce what you see. <a href="../">Docs</a> <a href="https://github.com/DMG-Venture-Studio/procedural-line-renderings">Source</a></p>
-  <nav><a href="#corner">Street corner</a><a href="#massing">Massing</a><a href="#skyline">Skyline</a><a href="#truss">Truss</a><a href="#plan">Plan</a></nav>
+  <p>Every flag, size, colour and camera of every component, with the tag and the API call that reproduce what you see. <a href="../">Docs</a> <a href="https://github.com/DMG-Venture-Studio/procedural-line-renderings">Source</a></p>
+  <nav><a href="#corner">Street corner</a><a href="#massing">Massing</a><a href="#skyline">Skyline</a><a href="#plan">Plan</a><button type="button" data-theme-toggle aria-pressed="false">Night</button></nav>
 
   <h2 id="corner">&lt;dmg-street-corner&gt;</h2>
-  <p>A street corner through a pinhole camera. Camera, massing, window families, ornament, millwork, street, depth, roof.</p>
+  <p>A street corner through a pinhole camera. Camera, massing, window families, ornament, millwork, the ink preset, street, depth, roof. Perspective 2 or 3.</p>
   <div data-playground="corner"></div>
 
   <h2 id="massing">&lt;dmg-massing&gt;</h2>
-  <p>An axonometric massing model with terraces, towers, courtyards, cantilevers, gables, openings, a site, an exploded view, and a light study.</p>
+  <p>A massing model with terraces, towers, courtyards, cantilevers, gables, openings, a site, an exploded view, and a light study. Axonometric, or perspective 2 or 3.</p>
   <div data-playground="massing"></div>
 
   <h2 id="skyline">&lt;dmg-skyline&gt;</h2>
-  <p>A Wave Function Collapse skyline over socketed tiles.</p>
+  <p>A 3D city block of towers with setbacks and crowns. Perspective 1 down the avenue, 2 from a corner, 3 looking up.</p>
   <div data-playground="skyline"></div>
-
-  <h2 id="truss">&lt;dmg-truss&gt;</h2>
-  <p>A Pratt or Warren truss in elevation with gussets, deck, and piers.</p>
-  <div data-playground="truss"></div>
 
   <h2 id="plan">&lt;dmg-plan&gt;</h2>
   <p>A floor plan by recursive subdivision with doors, windows, poche, and a stair.</p>
@@ -47,6 +44,7 @@
   <script src="../playground.js"></script>
   <script>
     document.querySelectorAll('[data-playground]').forEach(function (c) { Playground.mount(c, c.dataset.playground); });
+    Playground.theme();
   </script>
 </body>
 </html>
