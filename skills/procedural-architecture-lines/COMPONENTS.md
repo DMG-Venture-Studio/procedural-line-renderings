@@ -1,7 +1,8 @@
 # Using the packaged components
 
-Read with SKILL.md in this folder. The `@dmg-venture-studio/procedural-line-renderings` package (in
-`labs/procedural-lines/`) ships the two finished drawings as Web Components,
+Read with SKILL.md in this folder. The `@dmg-venture-studio/procedural-line-renderings`
+package (https://github.com/DMG-Venture-Studio/procedural-line-renderings)
+ships the two finished drawings as Web Components,
 so a page gets a drawing without writing any of the math in SKILL.md.
 
 ```html
