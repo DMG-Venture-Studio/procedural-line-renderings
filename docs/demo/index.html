@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Procedural line renderings, demo</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: var(--t-0); line-height: 1.55; padding: 32px clamp(16px, 5vw, 64px) 64px; }
+  h1 { font-family: var(--f-display); font-size: var(--t-4); letter-spacing: -0.03em; line-height: 1; margin: 0 0 12px; }
+  h2 { font-family: var(--f-display); font-size: var(--t-2); letter-spacing: -0.02em; margin: 48px 0 8px; }
+  p { max-width: 62ch; margin: 0; color: var(--muted); }
+  .controls { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; margin: 16px 0; font-size: var(--t--1); }
+  .controls label { display: inline-flex; gap: 6px; align-items: center; }
+  .controls select, .controls input[type="number"] { font: inherit; padding: 4px 8px; border: 1px solid var(--c-black-30); background: var(--bg); color: var(--fg); }
+  .controls button { font: inherit; padding: 6px 12px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; }
+  .controls code { font-family: var(--f-mono); color: var(--muted); }
+  .stage { border: 1px solid var(--line); height: 70vh; min-height: 420px; }
+  dmg-street-corner, dmg-massing { width: 100%; height: 100%; }
+  pre { background: var(--surface); padding: 12px 16px; overflow-x: auto; font-family: var(--f-mono); font-size: 13px; }
+</style>
+</head>
+<body>
+  <h1>Procedural line renderings</h1>
+  <p>Two Web Components that draw architectural line drawings from a seed. Give them a box; they fill it. The seed comes from the clock unless you set one, and in bounce mode a new seed is drawn at the bottom of every cycle.</p>
+
+  <h2>&lt;dmg-street-corner&gt;</h2>
+  <p>A street corner seen through a pinhole camera: split-grammar facades with window families and rooftops, gaps in the street wall, ornament, and the street in front. Pitch tilts the camera up. Full is the crowded recipe with a back row, balconies, awnings and setbacks.</p>
+  <div class="controls" data-for="corner">
+    <label>mode <select name="mode"><option value="bounce">bounce</option><option value="once">once</option></select></label>
+    <label>reseed <select name="reseed"><option value="cycle">cycle</option><option value="never">never</option></select></label>
+    <label><input type="checkbox" name="pitch"> pitch (three-point)</label>
+    <label><input type="checkbox" name="full"> full recipe</label>
+    <label>seed <input type="number" name="seed" placeholder="clock" style="width:9em"></label>
+    <button type="button" data-regen>Regenerate</button>
+    <code data-seed></code>
+  </div>
+  <div class="stage"><dmg-street-corner id="corner"></dmg-street-corner></div>
+
+  <h2>&lt;dmg-massing&gt;</h2>
+  <p>An axonometric massing model: stepped terraces with railings, a few towers with floor lines, and a light study in three hatch weights. Hidden lines are removed by painting far to near.</p>
+  <div class="controls" data-for="massing">
+    <label>mode <select name="mode"><option value="bounce">bounce</option><option value="once">once</option></select></label>
+    <label>reseed <select name="reseed"><option value="cycle">cycle</option><option value="never">never</option></select></label>
+    <label>seed <input type="number" name="seed" placeholder="clock" style="width:9em"></label>
+    <button type="button" data-regen>Regenerate</button>
+    <code data-seed></code>
+  </div>
+  <div class="stage"><dmg-massing id="massing"></dmg-massing></div>
+
+  <h2>Markup</h2>
+<pre>&lt;script src="procedural-line-renderings.js"&gt;&lt;/script&gt;
+
+&lt;dmg-street-corner style="width:100%;height:60vh"&gt;&lt;/dmg-street-corner&gt;
+&lt;dmg-massing seed="42" mode="once" color="#1F3FCF"&gt;&lt;/dmg-massing&gt;</pre>
+
+  <script src="../procedural-line-renderings.js"></script>
+  <script>
+    /* Wire each control block to its element: attributes on change, the seed readout on every draw. */
+    document.querySelectorAll('.controls[data-for]').forEach(function (block) {
+      var el = document.getElementById(block.dataset.for), out = block.querySelector('[data-seed]');
+      el.addEventListener('seed', function (e) { out.textContent = 'seed ' + e.detail.seed; });
+      block.querySelectorAll('select, input').forEach(function (ctl) {
+        ctl.addEventListener('change', function () {
+          if (ctl.type === 'checkbox') { if (ctl.checked) el.setAttribute(ctl.name, ''); else el.removeAttribute(ctl.name); }
+          else if (ctl.value === '') el.removeAttribute(ctl.name);
+          else el.setAttribute(ctl.name, ctl.value);
+        });
+      });
+      block.querySelector('[data-regen]').addEventListener('click', function () { el.regenerate(); });
+    });
+  </script>
+</body>
+</html>

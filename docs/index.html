@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Procedural line renderings</title>
+<meta name="description" content="Procedural architectural line drawings as dependency-free Web Components: a street corner through a pinhole camera and an axonometric massing model, seeded and plotted in like a pen plotter.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=Geist+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: var(--t-0); line-height: 1.55; }
+  .wrap { max-width: 1120px; margin-inline: auto; padding-inline: clamp(16px, 5vw, 64px); }
+  header.top { padding-block: 24px; display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  .brand { font-family: var(--f-display); font-weight: 700; font-size: var(--t-1); letter-spacing: -0.02em; color: var(--fg); text-decoration: none; }
+  nav a { color: var(--fg); text-decoration: none; margin-left: 24px; font-weight: 500; }
+  nav a:hover, a:hover { color: var(--accent-strong); }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  h1 { font-family: var(--f-display); font-size: var(--t-5); letter-spacing: -0.03em; line-height: 0.98; margin: 48px 0 24px; max-width: 14ch; text-wrap: balance; }
+  h2 { font-family: var(--f-display); font-size: var(--t-3); letter-spacing: -0.02em; line-height: 1.05; margin: 64px 0 16px; text-wrap: balance; }
+  h3 { font-size: var(--t-1); font-weight: 600; letter-spacing: -0.01em; margin: 32px 0 8px; }
+  p, li { max-width: 62ch; }
+  p { margin: 0 0 16px; }
+  .lede { font-size: var(--t-1); line-height: 1.45; max-width: 40ch; }
+  .muted { color: var(--muted); }
+  .example { border: 1px solid var(--line); height: 60vh; min-height: 380px; margin: 16px 0 8px; }
+  .example dmg-street-corner, .example dmg-massing { width: 100%; height: 100%; }
+  .caption { color: var(--muted); font-size: var(--t--1); margin-bottom: 32px; }
+  table { border-collapse: collapse; width: 100%; max-width: 72ch; margin: 16px 0 24px; font-size: var(--t--1); }
+  th, td { text-align: left; vertical-align: top; padding: 10px 12px 10px 0; border-top: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 500; }
+  code { font-family: var(--f-mono); font-size: 0.92em; }
+  pre { background: var(--surface); padding: 14px 18px; overflow-x: auto; font-family: var(--f-mono); font-size: 13px; line-height: 1.5; max-width: 72ch; }
+  pre code { font-size: inherit; }
+  .grid { display: grid; gap: 32px; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 900px) { .grid { grid-template-columns: 1fr 1fr; } }
+  footer { margin-top: 96px; padding-block: 32px 64px; border-top: 1px solid var(--line); color: var(--muted); font-size: var(--t--1); }
+  footer a { color: var(--muted); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <a class="brand" href="./">procedural-line-renderings</a>
+  <nav>
+    <a href="#use">Use</a>
+    <a href="#components">Components</a>
+    <a href="#math">The math</a>
+    <a href="demo/">Demo</a>
+    <a href="https://github.com/DMG-Venture-Studio/procedural-line-renderings">Source</a>
+  </nav>
+</header>
+
+<h1>Architectural line drawings, computed.</h1>
+<p class="lede">Two Web Components that draw a building scene from a seed and plot it in like a pen plotter. Vanilla JS, no dependencies, one colour, one pixel wide.</p>
+<p class="muted">Give an element a box and it fills it. With no seed set, it hashes the clock, so every visit is a sibling. In bounce mode it plots in, holds, plots out, and draws the next one.</p>
+
+<div class="example"><dmg-street-corner></dmg-street-corner></div>
+<p class="caption"><code>&lt;dmg-street-corner&gt;</code> with defaults. Reload for another.</p>
+
+<h2 id="use">Use</h2>
+<p>Script tag, no bundler. The file registers both elements and exposes the generators on <code>window.ProceduralLines</code>.</p>
+<pre><code>&lt;script src="procedural-line-renderings.js"&gt;&lt;/script&gt;
+
+&lt;dmg-street-corner style="width: 100%; height: 60vh"&gt;&lt;/dmg-street-corner&gt;
+&lt;dmg-massing seed="42" mode="once"&gt;&lt;/dmg-massing&gt;</code></pre>
+<p>ES modules, from the repository's <code>src/</code>:</p>
+<pre><code>import '@dmg-venture-studio/procedural-line-renderings';
+import { corner4, rng, bounce } from '@dmg-venture-studio/procedural-line-renderings';</code></pre>
+<p>The built file is <code>dist/procedural-line-renderings.js</code> in the repository, and the same file is served next to this page.</p>
+
+<h2 id="components">Components</h2>
+<div class="grid">
+  <div>
+    <h3><code>&lt;dmg-street-corner&gt;</code></h3>
+    <p>Two rows of buildings meeting at a corner, seen through a pinhole camera. Facades come from a split grammar with five window families, rooftop objects, gaps in the street wall, and ornament. The street in front carries a kerb, lamp posts, and trees grown by a branching rule.</p>
+    <div class="example"><dmg-street-corner pitch seed="2026"></dmg-street-corner></div>
+    <p class="caption">With <code>pitch</code>, the camera tilts up and verticals converge. Fixed seed 2026.</p>
+  </div>
+  <div>
+    <h3><code>&lt;dmg-massing&gt;</code></h3>
+    <p>Stacked terraces stepping back as they rise, with railings and stairs, a few towers with floor lines and mullions, and a light study in three hatch weights. Hidden lines are removed.</p>
+    <div class="example"><dmg-massing seed="7"></dmg-massing></div>
+    <p class="caption">Fixed seed 7, bounce mode.</p>
+  </div>
+</div>
+
+<h3>Attributes</h3>
+<table>
+  <tr><th>Attribute</th><th>Values</th><th>Default</th><th>Meaning</th></tr>
+  <tr><td><code>seed</code></td><td>integer</td><td>none</td><td>Fixed seed. When absent, a hash of the clock is used.</td></tr>
+  <tr><td><code>reseed</code></td><td><code>cycle</code>, <code>never</code></td><td><code>cycle</code></td><td>In bounce mode with no fixed seed, draw a new sibling at the bottom of each cycle.</td></tr>
+  <tr><td><code>mode</code></td><td><code>bounce</code>, <code>once</code></td><td><code>bounce</code></td><td>Plot in, hold, plot out, repeat; or plot in once and stop.</td></tr>
+  <tr><td><code>pitch</code></td><td>boolean</td><td>off</td><td>Street corner only. Tilt the camera up for three-point perspective.</td></tr>
+  <tr><td><code>full</code></td><td>boolean</td><td>off</td><td>Street corner only. The crowded recipe: back row, balconies, awnings, setbacks, closer camera.</td></tr>
+  <tr><td><code>color</code></td><td>CSS colour</td><td><code>#C4C6CB</code></td><td>Stroke colour.</td></tr>
+  <tr><td><code>page</code></td><td>CSS colour</td><td><code>#FFFFFF</code></td><td>Page colour used for hidden-line fills. Match your background.</td></tr>
+</table>
+
+<h3>Methods and events</h3>
+<table>
+  <tr><th>Member</th><th>What it does</th></tr>
+  <tr><td><code>element.regenerate()</code></td><td>Draws a new sibling from a fresh clock seed.</td></tr>
+  <tr><td><code>element.stop()</code></td><td>Halts the animation and leaves the last frame.</td></tr>
+  <tr><td><code>element.seed</code></td><td>The seed of the drawing on screen. Setting it redraws.</td></tr>
+  <tr><td><code>seed</code> event</td><td>Fires on every draw with <code>event.detail.seed</code>.</td></tr>
+</table>
+
+<h3>Sizing and motion</h3>
+<p>The element is <code>display: block</code> with a 240px minimum height. Size it with CSS or a grid cell; it redraws when its box changes. The drawing is fitted to the box, so keep text out of it. The element never measures its siblings.</p>
+<p>A cycle plots in over about seven seconds, holds five, plots out over four, and pauses briefly. Under <code>prefers-reduced-motion: reduce</code> the element draws the finished state once and never animates.</p>
+
+<h2 id="math">The math</h2>
+<h3>Projection</h3>
+<p>Projection is real geometry, never faked. The massing uses an axonometric projection at 30 degrees and hides lines with the painter's algorithm: boxes are sorted far to near by the sum of their centre coordinates, and each box fills its three visible faces in the page colour before stroking its edges, so nearer boxes erase what they cover.</p>
+<p>The street corner uses a pinhole camera with unit focal length standing in the negative quadrant of a 3D street. The result is fitted to the box with a uniform scale and translation. A similarity preserves perspective, so perspective strength comes only from how far the camera stands from the buildings. A pitched camera gives converging verticals.</p>
+<h3>Grammar and seed</h3>
+<p>Facades come from a split grammar in the tradition of Instant Architecture and CGA shape: a lot becomes a building, a building becomes floors, floors become bays, bays become windows from one of five families, and every split preserves the area it came from.</p>
+<p>Everything is a pure function of a 32-bit seed from a mulberry32 generator, so a drawing can be named by its seed and reproduced anywhere. Plotting animates by stroke length: a progress renderer draws the first <em>p</em> pixels of the stroke list each frame, with each item's fills appearing as the item starts, so hidden-line removal holds mid-plot.</p>
+
+<h2 id="agents">For coding agents</h2>
+<p>The repository is a Claude Code plugin. Its skill teaches the math, the composition rules, and how to use these components.</p>
+<pre><code>/plugin marketplace add DMG-Venture-Studio/procedural-line-renderings
+/plugin install procedural-line-renderings</code></pre>
+<p>Or copy <code>skills/procedural-architecture-lines/</code> into a project's <code>.claude/skills/</code>. Instructions for working on the repository itself are in its <code>CLAUDE.md</code>.</p>
+
+<footer>
+  <a href="https://github.com/DMG-Venture-Studio/procedural-line-renderings">Source on GitHub</a>. GPL-3.0. Published by DMG.
+</footer>
+
+</div>
+<script src="procedural-line-renderings.js"></script>
+</body>
+</html>

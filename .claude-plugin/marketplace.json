@@ -1,0 +1,20 @@
+{
+  "name": "dmg-venture-studio",
+  "owner": {
+    "name": "DMG",
+    "url": "https://github.com/DMG-Venture-Studio"
+  },
+  "metadata": {
+    "description": "Plugins published by DMG Venture Studio.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "procedural-line-renderings",
+      "source": "./",
+      "description": "Procedural architectural line drawings from real geometry: skill plus two Web Components.",
+      "version": "0.1.0",
+      "category": "design"
+    }
+  ]
+}

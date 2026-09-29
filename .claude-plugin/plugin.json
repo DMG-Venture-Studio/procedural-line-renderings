@@ -1,0 +1,14 @@
+{
+  "name": "procedural-line-renderings",
+  "version": "0.1.0",
+  "description": "Procedural architectural line drawings from real geometry: a skill covering seeded generators, projections, split grammars, hidden-line removal, and the dmg-street-corner and dmg-massing Web Components.",
+  "author": {
+    "name": "DMG",
+    "url": "https://github.com/DMG-Venture-Studio"
+  },
+  "homepage": "https://dmg-venture-studio.github.io/procedural-line-renderings/",
+  "repository": "https://github.com/DMG-Venture-Studio/procedural-line-renderings",
+  "license": "GPL-3.0",
+  "keywords": ["generative", "procedural", "architecture", "line-drawing", "canvas", "web-components"],
+  "skills": "./skills"
+}
