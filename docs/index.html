@@ -4,37 +4,38 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Procedural line renderings</title>
-<meta name="description" content="Procedural architectural line drawings as dependency-free Web Components: a street corner through a pinhole camera and an axonometric massing model, seeded and plotted in like a pen plotter.">
+<meta name="description" content="Procedural architectural line drawings as dependency-free Web Components: a street corner through a pinhole camera, an axonometric massing model, a Wave Function Collapse skyline, a truss, and a floor plan, each seeded and plotted in like a pen plotter, with every feature switchable.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=Geist+Mono:wght@400&display=swap">
 <link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="playground.css">
 <style>
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: var(--t-0); line-height: 1.55; }
-  .wrap { max-width: 1120px; margin-inline: auto; padding-inline: clamp(16px, 5vw, 64px); }
+  .wrap { max-width: 1180px; margin-inline: auto; padding-inline: clamp(16px, 5vw, 64px); }
   header.top { padding-block: 24px; display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; }
   .brand { font-family: var(--f-display); font-weight: 700; font-size: var(--t-1); letter-spacing: -0.02em; color: var(--fg); text-decoration: none; }
   nav a { color: var(--fg); text-decoration: none; margin-left: 24px; font-weight: 500; }
   nav a:hover, a:hover { color: var(--accent-strong); }
   a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; }
   h1 { font-family: var(--f-display); font-size: var(--t-5); letter-spacing: -0.03em; line-height: 0.98; margin: 48px 0 24px; max-width: 14ch; text-wrap: balance; }
-  h2 { font-family: var(--f-display); font-size: var(--t-3); letter-spacing: -0.02em; line-height: 1.05; margin: 64px 0 16px; text-wrap: balance; }
-  h3 { font-size: var(--t-1); font-weight: 600; letter-spacing: -0.01em; margin: 32px 0 8px; }
+  h2 { font-family: var(--f-display); font-size: var(--t-3); letter-spacing: -0.02em; line-height: 1.05; margin: 72px 0 16px; text-wrap: balance; }
+  h3 { font-size: var(--t-1); font-weight: 600; letter-spacing: -0.01em; margin: 40px 0 8px; }
   p, li { max-width: 62ch; }
   p { margin: 0 0 16px; }
   .lede { font-size: var(--t-1); line-height: 1.45; max-width: 40ch; }
   .muted { color: var(--muted); }
   .example { border: 1px solid var(--line); height: 60vh; min-height: 380px; margin: 16px 0 8px; }
-  .example dmg-street-corner, .example dmg-massing { width: 100%; height: 100%; }
+  .example > * { width: 100%; height: 100%; }
   .caption { color: var(--muted); font-size: var(--t--1); margin-bottom: 32px; }
-  table { border-collapse: collapse; width: 100%; max-width: 72ch; margin: 16px 0 24px; font-size: var(--t--1); }
-  th, td { text-align: left; vertical-align: top; padding: 10px 12px 10px 0; border-top: 1px solid var(--line); }
+  table { border-collapse: collapse; width: 100%; max-width: 80ch; margin: 16px 0 24px; font-size: var(--t--1); }
+  th, td { text-align: left; vertical-align: top; padding: 8px 12px 8px 0; border-top: 1px solid var(--line); }
   th { color: var(--muted); font-weight: 500; }
   code { font-family: var(--f-mono); font-size: 0.92em; }
-  pre { background: var(--surface); padding: 14px 18px; overflow-x: auto; font-family: var(--f-mono); font-size: 13px; line-height: 1.5; max-width: 72ch; }
+  pre { background: var(--surface); padding: 14px 18px; overflow-x: auto; font-family: var(--f-mono); font-size: 13px; line-height: 1.5; max-width: 80ch; }
   pre code { font-size: inherit; }
-  .grid { display: grid; gap: 32px; grid-template-columns: minmax(0, 1fr); }
-  @media (min-width: 900px) { .grid { grid-template-columns: 1fr 1fr; } }
+  details.ref { border-top: 1px solid var(--line); }
+  details.ref summary { cursor: pointer; padding: 10px 0; font-weight: 500; }
   footer { margin-top: 96px; padding-block: 32px 64px; border-top: 1px solid var(--line); color: var(--muted); font-size: var(--t--1); }
   footer a { color: var(--muted); }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
@@ -48,6 +49,7 @@
   <nav>
     <a href="#use">Use</a>
     <a href="#components">Components</a>
+    <a href="#reference">Reference</a>
     <a href="#math">The math</a>
     <a href="demo/">Demo</a>
     <a href="https://github.com/DMG-Venture-Studio/procedural-line-renderings">Source</a>
@@ -55,71 +57,95 @@
 </header>
 
 <h1>Architectural line drawings, computed.</h1>
-<p class="lede">Two Web Components that draw a building scene from a seed and plot it in like a pen plotter. Vanilla JS, no dependencies, one colour, one pixel wide.</p>
-<p class="muted">Give an element a box and it fills it. With no seed set, it hashes the clock, so every visit is a sibling. In bounce mode it plots in, holds, plots out, and draws the next one.</p>
+<p class="lede">Five Web Components that draw a building scene from a seed and plot it in like a pen plotter. Vanilla JS, no dependencies, one colour, one pixel wide. Every feature is a flag.</p>
+<p class="muted">Give an element a box and it fills it. With no seed set, it hashes the clock, so every visit is a sibling. In bounce mode it plots in, holds, plots out, and draws the next one. Night mode inverts the page and can light the windows.</p>
 
 <div class="example"><dmg-street-corner></dmg-street-corner></div>
 <p class="caption"><code>&lt;dmg-street-corner&gt;</code> with defaults. Reload for another.</p>
 
 <h2 id="use">Use</h2>
-<p>Script tag, no bundler. The file registers both elements and exposes the generators on <code>window.ProceduralLines</code>.</p>
+<p>Script tag, no bundler. The file registers all five elements and exposes the generators on <code>window.ProceduralLines</code>.</p>
 <pre><code>&lt;script src="procedural-line-renderings.js"&gt;&lt;/script&gt;
 
 &lt;dmg-street-corner style="width: 100%; height: 60vh"&gt;&lt;/dmg-street-corner&gt;
-&lt;dmg-massing seed="42" mode="once"&gt;&lt;/dmg-massing&gt;</code></pre>
+&lt;dmg-massing seed="42" mode="once"&gt;&lt;/dmg-massing&gt;
+&lt;dmg-skyline night&gt;&lt;/dmg-skyline&gt;
+&lt;dmg-street-corner options='{"shutters":true,"pediments":true,"trees":false}' glow="#F2D08A"&gt;&lt;/dmg-street-corner&gt;</code></pre>
 <p>ES modules, from the repository's <code>src/</code>:</p>
 <pre><code>import '@dmg-venture-studio/procedural-line-renderings';
 import { corner4, rng, bounce } from '@dmg-venture-studio/procedural-line-renderings';</code></pre>
-<p>The built file is <code>dist/procedural-line-renderings.js</code> in the repository, and the same file is served next to this page.</p>
+<p>Every playground below writes the exact tag and the equivalent API call for whatever you have switched on. Copy either.</p>
 
 <h2 id="components">Components</h2>
-<div class="grid">
-  <div>
-    <h3><code>&lt;dmg-street-corner&gt;</code></h3>
-    <p>Two rows of buildings meeting at a corner, seen through a pinhole camera. Facades come from a split grammar with five window families, rooftop objects, gaps in the street wall, and ornament. The street in front carries a kerb, lamp posts, and trees grown by a branching rule.</p>
-    <div class="example"><dmg-street-corner pitch seed="2026"></dmg-street-corner></div>
-    <p class="caption">With <code>pitch</code>, the camera tilts up and verticals converge. Fixed seed 2026.</p>
-  </div>
-  <div>
-    <h3><code>&lt;dmg-massing&gt;</code></h3>
-    <p>Stacked terraces stepping back as they rise, with railings and stairs, a few towers with floor lines and mullions, and a light study in three hatch weights. Hidden lines are removed.</p>
-    <div class="example"><dmg-massing seed="7"></dmg-massing></div>
-    <p class="caption">Fixed seed 7, bounce mode.</p>
-  </div>
-</div>
 
-<h3>Attributes</h3>
+<h3><code>&lt;dmg-street-corner&gt;</code></h3>
+<p>Two rows of buildings meeting at a corner, seen through a pinhole camera. Facades come from a split grammar with five window families, rooftop objects, gaps in the street wall, ornament, and twelve kinds of millwork. The street in front carries a kerb, road dashes, lamp posts, and trees grown by a branching rule. Depth features project from the wall; a back row can stand behind.</p>
+<div data-playground="corner"></div>
+
+<h3><code>&lt;dmg-massing&gt;</code></h3>
+<p>An axonometric massing model: stepped terraces with railings and stairs, towers with floor lines and mullions, courtyard footprints, cantilevers on columns, gable roofs, windows on a floor grid, a drawn site, an exploded view, and a light study in three hatch weights. Hidden lines are removed by painting far to near.</p>
+<div data-playground="massing"></div>
+
+<h3><code>&lt;dmg-skyline&gt;</code></h3>
+<p>A street of buildings found by Wave Function Collapse: a grid of socketed tiles collapsed one cell at a time until every shared edge agrees. Sky above roofs, roofs above walls, doors only at street level, streets between buildings. Nothing is placed; the skyline is the only consistent answer.</p>
+<div data-playground="skyline"></div>
+
+<h3><code>&lt;dmg-truss&gt;</code></h3>
+<p>A bridge truss in elevation. A Pratt web has verticals with diagonals leaning to the centre; a Warren web is a run of triangles. Members are double lines, joints carry gusset circles, and piers run down to hatched footings.</p>
+<div data-playground="truss"></div>
+
+<h3><code>&lt;dmg-plan&gt;</code></h3>
+<p>A floor plate split into rooms by recursive subdivision, walls with thickness, a door swing cut into every partition, a window in the outer wall for every room that touches it, hatched wall poche, and one stair.</p>
+<div data-playground="plan"></div>
+
+<h2 id="reference">Reference</h2>
+
+<h3>Attributes, all components</h3>
 <table>
   <tr><th>Attribute</th><th>Values</th><th>Default</th><th>Meaning</th></tr>
   <tr><td><code>seed</code></td><td>integer</td><td>none</td><td>Fixed seed. When absent, a hash of the clock is used.</td></tr>
   <tr><td><code>reseed</code></td><td><code>cycle</code>, <code>never</code></td><td><code>cycle</code></td><td>In bounce mode with no fixed seed, draw a new sibling at the bottom of each cycle.</td></tr>
   <tr><td><code>mode</code></td><td><code>bounce</code>, <code>once</code></td><td><code>bounce</code></td><td>Plot in, hold, plot out, repeat; or plot in once and stop.</td></tr>
-  <tr><td><code>pitch</code></td><td>boolean</td><td>off</td><td>Street corner only. Tilt the camera up for three-point perspective.</td></tr>
-  <tr><td><code>full</code></td><td>boolean</td><td>off</td><td>Street corner only. The crowded recipe: back row, balconies, awnings, setbacks, closer camera.</td></tr>
-  <tr><td><code>color</code></td><td>CSS colour</td><td><code>#C4C6CB</code></td><td>Stroke colour.</td></tr>
-  <tr><td><code>page</code></td><td>CSS colour</td><td><code>#FFFFFF</code></td><td>Page colour used for hidden-line fills. Match your background.</td></tr>
+  <tr><td><code>options</code></td><td>JSON object</td><td>none</td><td>Feature flags for this component, see the tables below. Only the flags you set are needed.</td></tr>
+  <tr><td><code>color</code></td><td>CSS colour</td><td><code>#C4C6CB</code>, night <code>#A8AAB0</code></td><td>Stroke colour.</td></tr>
+  <tr><td><code>page</code></td><td>CSS colour</td><td><code>#FFFFFF</code>, night <code>#0E0E10</code></td><td>Page colour used for hidden-line fills. Match your background.</td></tr>
+  <tr><td><code>glow</code></td><td>hex colour</td><td>off, night <code>#F2D08A</code></td><td>Light a random subset of windows in this colour with a soft shadow.</td></tr>
+  <tr><td><code>night</code></td><td>boolean</td><td>off</td><td>Dark page, light lines, glowing windows on by default and more of them.</td></tr>
+  <tr><td><code>pitch</code></td><td>boolean</td><td>off</td><td>Street corner shorthand for <code>options='{"pitch":true}'</code>.</td></tr>
+  <tr><td><code>full</code></td><td>boolean</td><td>off</td><td>Street corner shorthand for back row, balconies, awnings, setbacks, close camera.</td></tr>
 </table>
 
-<h3>Methods and events</h3>
+<h3>Methods, properties, events</h3>
 <table>
   <tr><th>Member</th><th>What it does</th></tr>
   <tr><td><code>element.regenerate()</code></td><td>Draws a new sibling from a fresh clock seed.</td></tr>
   <tr><td><code>element.stop()</code></td><td>Halts the animation and leaves the last frame.</td></tr>
   <tr><td><code>element.seed</code></td><td>The seed of the drawing on screen. Setting it redraws.</td></tr>
+  <tr><td><code>element.options</code></td><td>The resolved flags in effect, defaults filled in.</td></tr>
+  <tr><td><code>element.snippet</code></td><td>The HTML tag that reproduces the current state, non-default flags only.</td></tr>
   <tr><td><code>seed</code> event</td><td>Fires on every draw with <code>event.detail.seed</code>.</td></tr>
 </table>
 
+<h3>Flags by component</h3>
+<p>Each table is generated from the library's own option schema, so it cannot drift from the code.</p>
+<details class="ref" open><summary>Street corner</summary><table><tr><th>Flag</th><th>Family</th><th>Default</th><th>Meaning</th></tr><tbody data-options="corner"></tbody></table></details>
+<details class="ref"><summary>Massing</summary><table><tr><th>Flag</th><th>Family</th><th>Default</th><th>Meaning</th></tr><tbody data-options="massing"></tbody></table></details>
+<details class="ref"><summary>Skyline</summary><table><tr><th>Flag</th><th>Family</th><th>Default</th><th>Meaning</th></tr><tbody data-options="skyline"></tbody></table></details>
+<details class="ref"><summary>Truss</summary><table><tr><th>Flag</th><th>Family</th><th>Default</th><th>Meaning</th></tr><tbody data-options="truss"></tbody></table></details>
+<details class="ref"><summary>Plan</summary><table><tr><th>Flag</th><th>Family</th><th>Default</th><th>Meaning</th></tr><tbody data-options="plan"></tbody></table></details>
+
 <h3>Sizing and motion</h3>
-<p>The element is <code>display: block</code> with a 240px minimum height. Size it with CSS or a grid cell; it redraws when its box changes. The drawing is fitted to the box, so keep text out of it. The element never measures its siblings.</p>
-<p>A cycle plots in over about seven seconds, holds five, plots out over four, and pauses briefly. Under <code>prefers-reduced-motion: reduce</code> the element draws the finished state once and never animates.</p>
+<p>The element is <code>display: block</code> with a 240px minimum height. Size it with CSS or a grid cell; it redraws when its box changes. Fixed sizes work for known layouts; for a responsive box set a width and an <code>aspect-ratio</code>. The drawing is fitted to the box, so keep text out of it. The element never measures its siblings.</p>
+<p>A cycle plots in over about seven seconds, holds five, plots out over four, and pauses briefly. Under <code>prefers-reduced-motion: reduce</code> the element draws the finished state once and never animates. Glowing windows redraw every frame with a canvas shadow, which costs more on large boxes; prefer <code>mode="once"</code> when many are lit.</p>
 
 <h2 id="math">The math</h2>
 <h3>Projection</h3>
-<p>Projection is real geometry, never faked. The massing uses an axonometric projection at 30 degrees and hides lines with the painter's algorithm: boxes are sorted far to near by the sum of their centre coordinates, and each box fills its three visible faces in the page colour before stroking its edges, so nearer boxes erase what they cover.</p>
-<p>The street corner uses a pinhole camera with unit focal length standing in the negative quadrant of a 3D street. The result is fitted to the box with a uniform scale and translation. A similarity preserves perspective, so perspective strength comes only from how far the camera stands from the buildings. A pitched camera gives converging verticals.</p>
-<h3>Grammar and seed</h3>
-<p>Facades come from a split grammar in the tradition of Instant Architecture and CGA shape: a lot becomes a building, a building becomes floors, floors become bays, bays become windows from one of five families, and every split preserves the area it came from.</p>
-<p>Everything is a pure function of a 32-bit seed from a mulberry32 generator, so a drawing can be named by its seed and reproduced anywhere. Plotting animates by stroke length: a progress renderer draws the first <em>p</em> pixels of the stroke list each frame, with each item's fills appearing as the item starts, so hidden-line removal holds mid-plot.</p>
+<p>Projection is real geometry, never faked. The massing uses an axonometric projection, 30 degrees by default or a random dimetric angle, and hides lines with the painter's algorithm: boxes are sorted far to near by the sum of their centre coordinates, and each box fills its visible faces in the page colour before stroking its edges, so nearer boxes erase what they cover. Gable roofs replace the top face with two slopes; exploded views lift boxes and draw dashed guides.</p>
+<p>The street corner uses a pinhole camera with unit focal length standing in the negative quadrant of a 3D street. The result is fitted to the box with a uniform scale and translation. A similarity preserves perspective, so perspective strength comes only from how far the camera stands from the buildings. A pitched camera gives converging verticals. Millwork is drawn in facade coordinates through the same projection, so an architrave or a pediment recedes correctly.</p>
+<h3>Grammar, constraint, and seed</h3>
+<p>Facades come from a split grammar in the tradition of Instant Architecture and CGA shape: a lot becomes a building, a building becomes floors, floors become bays, bays become windows from one of five families, and trim is applied per opening from inside that loop. The skyline is a Wave Function Collapse: each tile has four socket labels and two tiles may touch only when facing sockets match; the lowest-entropy cell collapses first and the constraint propagates.</p>
+<p>Everything is a pure function of a 32-bit seed from a mulberry32 generator, so a drawing can be named by its seed and reproduced anywhere. Plotting animates by stroke length: a progress renderer draws the first <em>p</em> pixels of the stroke list each frame, with each item's fills and lit windows appearing as the item starts, so hidden-line removal holds mid-plot.</p>
+<p>The vocabulary and the sources behind the millwork are in <a href="https://github.com/DMG-Venture-Studio/procedural-line-renderings/blob/main/docs/research.md">research.md</a>.</p>
 
 <h2 id="agents">For coding agents</h2>
 <p>The repository is a Claude Code plugin. Its skill teaches the math, the composition rules, and how to use these components.</p>
@@ -133,5 +159,10 @@ import { corner4, rng, bounce } from '@dmg-venture-studio/procedural-line-render
 
 </div>
 <script src="procedural-line-renderings.js"></script>
+<script src="playground.js"></script>
+<script>
+  document.querySelectorAll('[data-playground]').forEach(function (c) { Playground.mount(c, c.dataset.playground); });
+  document.querySelectorAll('[data-options]').forEach(function (t) { Playground.optionsTable(t, t.dataset.options); });
+</script>
 </body>
 </html>

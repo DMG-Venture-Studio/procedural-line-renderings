@@ -4,72 +4,49 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Procedural line renderings, demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=Geist+Mono:wght@400&display=swap">
 <link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../playground.css">
 <style>
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: var(--t-0); line-height: 1.55; padding: 32px clamp(16px, 5vw, 64px) 64px; }
   h1 { font-family: var(--f-display); font-size: var(--t-4); letter-spacing: -0.03em; line-height: 1; margin: 0 0 12px; }
-  h2 { font-family: var(--f-display); font-size: var(--t-2); letter-spacing: -0.02em; margin: 48px 0 8px; }
-  p { max-width: 62ch; margin: 0; color: var(--muted); }
-  .controls { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; margin: 16px 0; font-size: var(--t--1); }
-  .controls label { display: inline-flex; gap: 6px; align-items: center; }
-  .controls select, .controls input[type="number"] { font: inherit; padding: 4px 8px; border: 1px solid var(--c-black-30); background: var(--bg); color: var(--fg); }
-  .controls button { font: inherit; padding: 6px 12px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; }
-  .controls code { font-family: var(--f-mono); color: var(--muted); }
-  .stage { border: 1px solid var(--line); height: 70vh; min-height: 420px; }
-  dmg-street-corner, dmg-massing { width: 100%; height: 100%; }
-  pre { background: var(--surface); padding: 12px 16px; overflow-x: auto; font-family: var(--f-mono); font-size: 13px; }
+  h2 { font-family: var(--f-display); font-size: var(--t-2); letter-spacing: -0.02em; margin: 56px 0 8px; }
+  p { max-width: 62ch; margin: 0 0 8px; color: var(--muted); }
+  a { color: var(--accent); }
+  nav a { margin-right: 20px; }
 </style>
 </head>
 <body>
   <h1>Procedural line renderings</h1>
-  <p>Two Web Components that draw architectural line drawings from a seed. Give them a box; they fill it. The seed comes from the clock unless you set one, and in bounce mode a new seed is drawn at the bottom of every cycle.</p>
+  <p>Every flag, size, and colour of every component, with the tag and the API call that reproduce what you see. <a href="../">Docs</a> <a href="https://github.com/DMG-Venture-Studio/procedural-line-renderings">Source</a></p>
+  <nav><a href="#corner">Street corner</a><a href="#massing">Massing</a><a href="#skyline">Skyline</a><a href="#truss">Truss</a><a href="#plan">Plan</a></nav>
 
-  <h2>&lt;dmg-street-corner&gt;</h2>
-  <p>A street corner seen through a pinhole camera: split-grammar facades with window families and rooftops, gaps in the street wall, ornament, and the street in front. Pitch tilts the camera up. Full is the crowded recipe with a back row, balconies, awnings and setbacks.</p>
-  <div class="controls" data-for="corner">
-    <label>mode <select name="mode"><option value="bounce">bounce</option><option value="once">once</option></select></label>
-    <label>reseed <select name="reseed"><option value="cycle">cycle</option><option value="never">never</option></select></label>
-    <label><input type="checkbox" name="pitch"> pitch (three-point)</label>
-    <label><input type="checkbox" name="full"> full recipe</label>
-    <label>seed <input type="number" name="seed" placeholder="clock" style="width:9em"></label>
-    <button type="button" data-regen>Regenerate</button>
-    <code data-seed></code>
-  </div>
-  <div class="stage"><dmg-street-corner id="corner"></dmg-street-corner></div>
+  <h2 id="corner">&lt;dmg-street-corner&gt;</h2>
+  <p>A street corner through a pinhole camera. Camera, massing, window families, ornament, millwork, street, depth, roof.</p>
+  <div data-playground="corner"></div>
 
-  <h2>&lt;dmg-massing&gt;</h2>
-  <p>An axonometric massing model: stepped terraces with railings, a few towers with floor lines, and a light study in three hatch weights. Hidden lines are removed by painting far to near.</p>
-  <div class="controls" data-for="massing">
-    <label>mode <select name="mode"><option value="bounce">bounce</option><option value="once">once</option></select></label>
-    <label>reseed <select name="reseed"><option value="cycle">cycle</option><option value="never">never</option></select></label>
-    <label>seed <input type="number" name="seed" placeholder="clock" style="width:9em"></label>
-    <button type="button" data-regen>Regenerate</button>
-    <code data-seed></code>
-  </div>
-  <div class="stage"><dmg-massing id="massing"></dmg-massing></div>
+  <h2 id="massing">&lt;dmg-massing&gt;</h2>
+  <p>An axonometric massing model with terraces, towers, courtyards, cantilevers, gables, openings, a site, an exploded view, and a light study.</p>
+  <div data-playground="massing"></div>
 
-  <h2>Markup</h2>
-<pre>&lt;script src="procedural-line-renderings.js"&gt;&lt;/script&gt;
+  <h2 id="skyline">&lt;dmg-skyline&gt;</h2>
+  <p>A Wave Function Collapse skyline over socketed tiles.</p>
+  <div data-playground="skyline"></div>
 
-&lt;dmg-street-corner style="width:100%;height:60vh"&gt;&lt;/dmg-street-corner&gt;
-&lt;dmg-massing seed="42" mode="once" color="#1F3FCF"&gt;&lt;/dmg-massing&gt;</pre>
+  <h2 id="truss">&lt;dmg-truss&gt;</h2>
+  <p>A Pratt or Warren truss in elevation with gussets, deck, and piers.</p>
+  <div data-playground="truss"></div>
+
+  <h2 id="plan">&lt;dmg-plan&gt;</h2>
+  <p>A floor plan by recursive subdivision with doors, windows, poche, and a stair.</p>
+  <div data-playground="plan"></div>
 
   <script src="../procedural-line-renderings.js"></script>
+  <script src="../playground.js"></script>
   <script>
-    /* Wire each control block to its element: attributes on change, the seed readout on every draw. */
-    document.querySelectorAll('.controls[data-for]').forEach(function (block) {
-      var el = document.getElementById(block.dataset.for), out = block.querySelector('[data-seed]');
-      el.addEventListener('seed', function (e) { out.textContent = 'seed ' + e.detail.seed; });
-      block.querySelectorAll('select, input').forEach(function (ctl) {
-        ctl.addEventListener('change', function () {
-          if (ctl.type === 'checkbox') { if (ctl.checked) el.setAttribute(ctl.name, ''); else el.removeAttribute(ctl.name); }
-          else if (ctl.value === '') el.removeAttribute(ctl.name);
-          else el.setAttribute(ctl.name, ctl.value);
-        });
-      });
-      block.querySelector('[data-regen]').addEventListener('click', function () { el.regenerate(); });
-    });
+    document.querySelectorAll('[data-playground]').forEach(function (c) { Playground.mount(c, c.dataset.playground); });
   </script>
 </body>
 </html>

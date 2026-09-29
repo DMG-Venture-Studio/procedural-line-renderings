@@ -1,0 +1,19 @@
+/* Playground styles, shared by the docs page and the demo. Uses the DMG tokens. */
+.pg { display: grid; gap: 16px; margin: 16px 0 48px; }
+.pg-flags { display: grid; gap: 12px 24px; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+.pg-flags fieldset { border: 1px solid var(--line); padding: 10px 12px 12px; margin: 0; min-width: 0; }
+.pg-flags legend { color: var(--muted); font-size: var(--t--1); font-weight: 500; padding: 0 4px; }
+.pg-flags label { display: block; font-size: var(--t--1); font-family: var(--f-mono); line-height: 1.7; white-space: nowrap; cursor: pointer; }
+.pg-panel { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
+.pg-row { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; font-size: var(--t--1); }
+.pg-row label { display: inline-flex; gap: 6px; align-items: center; }
+.pg-row select, .pg-row input[type="number"] { font: inherit; padding: 4px 8px; border: 1px solid var(--c-black-30); background: var(--bg); color: var(--fg); max-width: 9em; }
+.pg-row input[type="color"] { width: 28px; height: 22px; padding: 0; border: 1px solid var(--c-black-30); background: none; }
+.pg-row button, .pg-snip-head button { font: inherit; font-size: var(--t--1); padding: 5px 12px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; }
+.pg-row code { font-family: var(--f-mono); color: var(--muted); }
+.pg-stage { border: 1px solid var(--line); overflow: auto; padding: 0; background: #FFFFFF; }
+.pg-stage > * { display: block; margin: 0; }
+.pg-snips { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 900px) { .pg-snips { grid-template-columns: 1fr 1fr; } }
+.pg-snip-head { display: flex; justify-content: space-between; align-items: center; font-size: var(--t--1); color: var(--muted); margin-bottom: 6px; }
+.pg pre { margin: 0; background: var(--surface); padding: 12px 14px; overflow-x: auto; font-family: var(--f-mono); font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
