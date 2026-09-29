@@ -142,7 +142,7 @@ No `clip()` needed, and the lines are part of the stroke list, so they animate
 with everything else. Use hatching for one face orientation only; it reads as
 light direction.
 
-### 6. Wave Function Collapse for massing and facades
+### 6. Wave Function Collapse for tile and lot decisions
 
 WFC fills a grid with tiles so that every shared edge agrees. Give each tile
 four socket labels (T, R, B, L); two tiles may touch when the facing sockets
@@ -242,3 +242,44 @@ kept as a third list on each item, `{poly, k}` with `k` a random key drawn at
 generation time, filled with a glow colour under a soft canvas shadow when
 `k` is below a probability. Keep fills below glows below strokes so the lines
 stay crisp.
+
+### 12. Perspective modes through one camera
+
+One-, two- and three-point perspective are not three projections. They are
+the same pinhole camera placed and aimed differently:
+
+- **One-point:** the camera looks straight down an axis of the scene (an
+  avenue). Every line parallel to that axis converges on one point; lines
+  across it stay horizontal. Use it for streets and corridors.
+- **Two-point:** the camera is level and turned to the scene's axes. Lines
+  along either axis converge on their own point; verticals stay vertical.
+  Use it for corners and for a model seen from outside.
+- **Three-point:** pitch the camera up (or down). Verticals converge on a
+  third point above (or below). Use it for towers seen from the street.
+
+Fit every result to the box with a similarity, never a stretch. A corner
+cannot be one-point, because it has two facade directions; reject the value
+with a warning and fall back.
+
+### 13. A city block as stacked boxes
+
+A skyline that reads as a city is a plan of lots, not a row of rectangles.
+Lay lots on a grid (or on both sides of an avenue for one-point), give each
+a tower of stacked tiers that step in as they rise, or a low podium, and pick
+a crown per tower: flat, spire, dome as rings and meridians, mast, or a ring
+of columns under a cap. Draw only faces that face the camera (a dot product
+of the face normal with the direction to the camera), fill each in page
+colour far to near, then stroke its edges, a line at every floor, mullions on
+glass, a spandrel line on masonry. Floor lines are what make a skyline read
+as glazing in ink; three to six thousand strokes at desktop size is the
+range that looks dense without smearing.
+
+### 14. Ink
+
+Pen-and-ink references read dark because of shade, not outline. Hatch the
+band under every projection (cornice, bay, balcony), the head and one jamb of
+every opening, and the soffit of a deep cornice, as parallel line fields at
+0.12 to 0.16 units. Give a sun side per seed and keep it consistent. Bays,
+stoops and cornices project from the wall, so draw them as their own items
+with page-colour fills, right after the wall they sit on, or the wall's lines
+will show through them.

@@ -2,7 +2,7 @@
 
 Read with SKILL.md in this folder. The `@dmg-venture-studio/procedural-line-renderings`
 package (https://github.com/DMG-Venture-Studio/procedural-line-renderings)
-ships five finished drawings as Web Components, so a page gets a drawing
+ships four finished drawings as Web Components, so a page gets a drawing
 without writing any of the math in SKILL.md. Live playgrounds for every flag:
 https://dmg-venture-studio.github.io/procedural-line-renderings/
 
@@ -10,25 +10,30 @@ https://dmg-venture-studio.github.io/procedural-line-renderings/
 <script src="dist/procedural-line-renderings.js"></script>
 <dmg-street-corner style="width:100%;height:60vh"></dmg-street-corner>
 <dmg-massing seed="42" mode="once" color="#1F3FCF"></dmg-massing>
-<dmg-skyline night></dmg-skyline>
-<dmg-truss options='{"warren":false}'></dmg-truss>
+<dmg-skyline night perspective="1"></dmg-skyline>
+<dmg-street-corner preset="ink" perspective="3"></dmg-street-corner>
+<dmg-massing perspective="2"></dmg-massing>
 <dmg-plan options='{"poche":false}'></dmg-plan>
 ```
 
-- **Elements:** `dmg-street-corner`, `dmg-massing`, `dmg-skyline`, `dmg-truss`,
-  `dmg-plan`.
+- **Elements:** `dmg-street-corner`, `dmg-massing`, `dmg-skyline`, `dmg-plan`.
 - **Attributes:** `seed` (fixed integer; absent means hash the clock),
   `reseed` (`cycle` or `never`), `mode` (`bounce` or `once`), `options` (JSON
   of feature flags, only the ones you change), `color`, `page` (hidden-line
   fill colour; match the background), `glow` (hex; lights a random subset of
-  windows), `night` (dark page, light lines, glow on). Street corner
-  shorthands: `pitch`, `full`.
+  windows; ignored by the plan), `night` (dark page, light lines, glow on),
+  `perspective` (corner 2 or 3; massing 0, 2 or 3; skyline 1, 2 or 3; one
+  pinhole camera for all of them), `preset` (corner: `ink`). Street corner
+  shorthands: `pitch` (perspective 3), `full`.
 - **Flags:** every drawable feature is a flag in the library's `OPTIONS`
   schema. Street corner families: camera, massing, windows, ornament,
   millwork (architraves, lintels, shutters, stringCourses, dentils,
-  pediments, pilasters, transoms, parapetCaps, fireEscapes), street, depth,
-  roof (rooftops, gables, mansards). Massing: terraces, towers, courtyards,
-  cantilevers, hatchlight, openings, gables, ground, exploded, randomAngle.
+  pediments, pilasters, transoms, parapetCaps, fireEscapes), ink (bays,
+  roundedCorner, deepCornice, shadowHatch, fence, stoop, planters, arches),
+  street, depth, roof (rooftops, gables, mansards). Massing: terraces, towers,
+  courtyards, cantilevers, hatchlight, openings, gables, ground, exploded,
+  randomAngle. Skyline: setbacks, podiums, dense, spires, domes, masts,
+  crowns, floorLines, mullions, street.
   Read `element.options` for the resolved set; the README lists defaults.
 - **Methods and events:** `regenerate()`, `stop()`, the `seed` property, the
   `options` property, the `snippet` property (the tag that reproduces the

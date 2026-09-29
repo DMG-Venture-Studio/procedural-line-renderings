@@ -1,22 +1,39 @@
 {
   "name": "@dmg-venture-studio/procedural-line-renderings",
   "version": "0.1.0",
-  "description": "Procedural architectural line drawings as dependency-free Web Components: a pinhole-camera street corner, axonometric massing, a Wave Function Collapse skyline, a truss, and a floor plan, seeded, plotted in like a pen plotter, every feature a flag.",
+  "description": "Procedural architectural line drawings as dependency-free Web Components: a pinhole-camera street corner with an ink preset, a massing model, a 3D city-block skyline, and a floor plan, seeded, plotted in like a pen plotter, every feature a flag, one-, two- or three-point perspective.",
   "type": "module",
   "main": "dist/procedural-line-renderings.js",
   "module": "src/index.js",
   "exports": {
-    ".": { "import": "./src/index.js", "default": "./dist/procedural-line-renderings.js" }
+    ".": {
+      "import": "./src/index.js",
+      "default": "./dist/procedural-line-renderings.js"
+    }
   },
-  "files": ["src", "dist", "README.md"],
+  "files": [
+    "src",
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "node build.mjs",
     "test": "node build.mjs && node test/smoke.mjs"
   },
-  "keywords": ["generative", "procedural", "architecture", "line-drawing", "canvas", "web-components"],
+  "keywords": [
+    "generative",
+    "procedural",
+    "architecture",
+    "line-drawing",
+    "canvas",
+    "web-components"
+  ],
   "author": "DMG",
   "license": "GPL-3.0",
-  "repository": { "type": "git", "url": "https://github.com/DMG-Venture-Studio/procedural-line-renderings.git" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DMG-Venture-Studio/procedural-line-renderings.git"
+  },
   "homepage": "https://dmg-venture-studio.github.io/procedural-line-renderings/",
   "private": true
 }
