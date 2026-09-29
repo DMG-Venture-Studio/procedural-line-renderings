@@ -6,10 +6,11 @@ Canonical instructions for any coding agent working in this repository.
 ## What this is
 
 Procedural architectural line drawings computed from real geometry and drawn
-on a canvas: a street corner seen through a pinhole camera, and an axonometric
-massing model. Shipped as two dependency-free Web Components,
-`<dmg-street-corner>` and `<dmg-massing>`, plus the generators they use. Every
-drawing is a pure function of a 32-bit seed.
+on a canvas. Five dependency-free Web Components: `<dmg-street-corner>` (a
+pinhole-camera street), `<dmg-massing>` (axonometric boxes), `<dmg-skyline>`
+(Wave Function Collapse), `<dmg-truss>`, and `<dmg-plan>`, plus the
+generators they use. Every drawing is a pure function of a 32-bit seed, and
+every drawable feature is a flag in `src/options.js`.
 
 The repository is also a Claude Code plugin. The skill in
 `skills/procedural-architecture-lines/` teaches the math and rules and how to
@@ -22,16 +23,21 @@ marketplace.
 ```
 src/random.js       seeded generator (mulberry32), clock hash, pick
 src/camera.js       axonometric, facade-plane two-point, pinhole projections
+src/options.js      option schemas: every flag, its family, default, description
 src/grammar.js      facade split grammar, window families, gap elements
+src/millwork.js     trim and roof profiles drawn in facade coordinates
 src/wfc.js          Wave Function Collapse solver over socketed tiles
-src/massing.js      box clusters, painter's order, hatching, terraces, towers
+src/render.js       progress renderer with glows, draw-in, bounce, reduced motion
+src/massing.js      box clusters, painter's order, terraces, towers, gables, openings
 src/corner.js       the street corner scene (corner4)
-src/render.js       progress renderer, draw-in, bounce runner, reduced motion
-src/components.js   the two Web Components
+src/skyline.js      the WFC skyline
+src/truss.js        the truss
+src/plan.js         the floor plan
+src/components.js   the five Web Components, options parsing, snippetFor
 src/index.js        public exports
 build.mjs           concatenates src/ in dependency order into dist/ and docs/
 dist/               the assembled script-tag build, checked in
-docs/               the GitHub Pages site: docs page, demo, the built script
+docs/               the GitHub Pages site: docs, demo, playground.js, research.md
 test/smoke.mjs      headless test with a stub canvas
 skills/             the agent skill (SKILL.md, snippets.js, COMPONENTS.md)
 ```
@@ -40,7 +46,7 @@ skills/             the agent skill (SKILL.md, snippets.js, COMPONENTS.md)
 
 ```sh
 node build.mjs        # writes dist/ and docs/procedural-line-renderings.js
-node test/smoke.mjs   # generates every kind over several seeds, checks geometry
+node test/smoke.mjs   # every generator, every flag, geometry, determinism, dist parity
 npm test              # both
 ```
 
@@ -55,11 +61,18 @@ users read them directly. Never edit them by hand.
 - Determinism: never call `Math.random()` inside a generator. Take a seeded
   function `r` and thread it through. The same seed must give the same
   drawing on every platform. The test asserts this.
+- Every feature is a flag. Add it to `src/options.js` with a family, default,
+  and description, gate the drawing on it, and the test will require that it
+  changes the drawing for at least one seed. The docs tables and playground
+  checkboxes are generated from the schema, so they need no edit.
 - Every function has a doc comment saying what it takes and returns. Keep
   functions under 50 lines where practical.
-- Drawings are lists of items `{fills, strokes}` in draw order. Fills are page
-  colour and exist only for hidden-line removal. Strokes are `[[x0,y0],[x1,y1]]`.
-- Projection is real geometry. Do not fake perspective with skews.
+- Drawings are lists of items `{fills, glows, strokes}` in draw order. Fills
+  are page colour and exist only for hidden-line removal. Glows are window
+  polygons `{poly, k}` lit when `k` is under the glow probability. Strokes are
+  `[[x0,y0],[x1,y1]]`. Keep fills below glows below strokes.
+- Projection is real geometry. Do not fake perspective with skews. Millwork
+  is drawn in facade coordinates so it projects through any camera.
 - Components draw only inside their own box and never measure sibling text.
 - Respect `prefers-reduced-motion` by drawing the finished state once.
 - No personal names anywhere: code, comments, commits, docs, examples. The
@@ -69,12 +82,15 @@ users read them directly. Never edit them by hand.
 
 ## Where to change what
 
-- A new drawing kind: add a generator module under `src/`, export it from
-  `src/index.js`, add it to `ORDER` and `EXPORTS` in `build.mjs`, register a
-  generator in `src/components.js` if it should be an element, add a case to
-  `test/smoke.mjs`, document it in `README.md` and `docs/index.html`, and add
-  the technique to the skill.
+- A new flag on an existing generator: `src/options.js`, then the generator.
+- A new drawing kind: add a generator module under `src/` taking
+  `(r, region, options)`, add its schema to `src/options.js`, export it from
+  `src/index.js`, add it to `ORDER` and `EXPORTS` in `build.mjs`, register it
+  in `GENERATORS` and `TAGS` in `src/components.js`, add it to `GEN` in
+  `test/smoke.mjs` and to `GEN` in `docs/playground.js`, document it in
+  `README.md` and `docs/index.html`, and add the technique to the skill.
 - A change to the math: update the skill's `SKILL.md` in the same commit.
+- New millwork: read `docs/research.md` first and add the source there.
 
 ## License
 

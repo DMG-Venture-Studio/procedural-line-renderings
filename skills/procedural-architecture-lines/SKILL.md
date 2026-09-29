@@ -217,3 +217,28 @@ standalone function you can paste into a page.
 
 See COMPONENTS.md next to this file for the `<dmg-street-corner>` and
 `<dmg-massing>` elements: attributes, methods, events, sizing, and motion.
+
+### 10. Every feature is a flag
+
+Keep an option schema next to the generators: each flag with a family, a
+default, and a one-line description. Generators resolve their options
+against it, the documentation renders its tables from it, and the test
+toggles every entry and requires that each one changes the drawing for at
+least one seed. A feature that changes nothing is a bug, not a default.
+
+Millwork belongs in facade coordinates (distance along the wall, height,
+projection outward), drawn through the same `line` and `rect` helpers as the
+windows, so an architrave or a pediment recedes correctly under any camera.
+The vocabulary worth drawing as lines: architraves, lintels, shutters,
+string courses, dentils, pediments, pilasters, transoms, parapet caps, fire
+escapes, gable and mansard profiles. Finer texture (glazing bars, brick
+coursing) does not read at one pixel and is left out.
+
+### 11. Night and glow
+
+A drawing on a dark page is the same strokes in a light colour with the
+page-colour fills switched to the dark. Lit windows are the window polygons
+kept as a third list on each item, `{poly, k}` with `k` a random key drawn at
+generation time, filled with a glow colour under a soft canvas shadow when
+`k` is below a probability. Keep fills below glows below strokes so the lines
+stay crisp.
