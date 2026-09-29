@@ -5,7 +5,7 @@
    read as glazing in ink. Every feature is a flag in SKYLINE_OPTIONS; `perspective` is 1, 2 or 3. */
 import { pick } from './random.js';
 import { pinhole, fitSimilarity, facesCamera } from './camera.js';
-import { resolve } from './options.js';
+import { randomizeOptions, resolve } from './options.js';
 
 var FLOOR = 3.4;
 
@@ -154,6 +154,7 @@ function skylineCamera(r, P, F) {
 
 /** The skyline. r: generator. R: region. opts: see SKYLINE_OPTIONS and `perspective`. Returns items. */
 export function skyline(r, R, opts) {
+  opts = randomizeOptions('skyline', r, opts || {});
   var F = resolve('skyline', opts), P = F.perspective, cam = skylineCamera(r, P, F), lots = layout(r, F, P);
   var boxes = [], crowns = [], C = cam.C;
   lots.forEach(function (lot) {
@@ -170,5 +171,7 @@ export function skyline(r, R, opts) {
   if (F.street) items.push({ strokes: streets(r, cam, lots, P, F) });
   boxes.forEach(function (b, i) { items.push(boxItem(r, cam, b, F, i >= boxes.length - nearCount)); });
   items.push({ strokes: crownStrokes });
-  return fitSimilarity(items, R, { x: 0.02, top: 0.06, bottom: 0.08 });
+  var out = fitSimilarity(items, R, { x: 0.02, top: 0.06, bottom: 0.08 });
+  out.options = F;
+  return out;
 }

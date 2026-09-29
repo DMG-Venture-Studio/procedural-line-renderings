@@ -1,7 +1,8 @@
 /* Axonometric massing: box clusters, decorated box drawings, and the fitted massing scene.
    Every feature is a flag in MASSING_OPTIONS (src/options.js). */
 import { makeIso, pinhole } from './camera.js';
-import { resolve } from './options.js';
+import { resolve, randomizeOptions } from './options.js';
+import { wantsFacades, wantsStreet, boxRecipe, faceFacade, streetAround, streetReach, FACADE_UNITS } from './facades.js';
 
 /** A seeded cluster of stacked boxes on a grid, sorted far to near for painter's order.
     opts: count, grid. Returns [{x, y, z, dx, dy, dz}]. */
@@ -92,6 +93,22 @@ function gableRoof(b, iso, s) {
   return [back, front];
 }
 
+/** A mansard storey on a box: the top ring steps in and rises, the two visible slopes get slate
+    lines, and the flat cap on top. Returns fills for the slopes and the cap. */
+function mansardRoof(b, iso, s) {
+  var X = b.x + b.dx, Y = b.y + b.dy, Z = b.z + lift(b) + b.dz, i = Math.min(0.35, b.dx * 0.3, b.dy * 0.3), h = 0.5;
+  var top = [iso(b.x + i, b.y + i, Z + h), iso(X - i, b.y + i, Z + h), iso(X - i, Y - i, Z + h), iso(b.x + i, Y - i, Z + h)];
+  var sx = [iso(X, b.y, Z), iso(X, Y, Z), iso(X - i, Y - i, Z + h), iso(X - i, b.y + i, Z + h)];
+  var sy = [iso(b.x, Y, Z), iso(X, Y, Z), iso(X - i, Y - i, Z + h), iso(b.x + i, Y - i, Z + h)];
+  quad(sx, s); quad(sy, s); quad(top, s);
+  for (var k = 1; k < 4; k++) {
+    var t = k / 4;
+    s.push([iso(X - i * t, b.y + i * t, Z + h * t), iso(X - i * t, Y - i * t, Z + h * t)]);
+    s.push([iso(b.x + i * t, Y - i * t, Z + h * t), iso(X - i * t, Y - i * t, Z + h * t)]);
+  }
+  return [sx, sy, top];
+}
+
 /** Thin columns from the underside of an overhanging box down to the ground or the box below. */
 function columns(b, iso, s) {
   var z0 = b.z + lift(b), zb = b.support || 0;
@@ -106,23 +123,25 @@ function guides(b, iso, s) {
   corners.forEach(function (c) { for (var z = b.z; z < z0; z += 0.3) s.push([iso(c[0], c[1], z), iso(c[0], c[1], Math.min(z0, z + 0.15))]); });
 }
 
-/** Decorated box drawing: outlines, tower or terrace detail, gable, openings, columns, and hatching.
-    F.hatchlight gives three weights (top blank, +x single, +y cross); otherwise the +x face is hatched.
+/** Decorated box drawing: outlines, tower or terrace detail, gable or mansard, openings, columns,
+    and hatching. F.hatchlight gives three weights (top blank, +x single, +y cross); otherwise the
+    +x face is hatched. Boxes marked b.facade get no hatching, their faces carry a facade instead.
     Returns {fills, glows, strokes}. */
 export function boxDrawing2(b, iso, u, F) {
   F = F || {};
   var fc = faces(b, iso, F), s = [], glows = [], fills = [fc.fx, fc.fy];
   if (b.gable && fc.topVisible) fills = fills.concat(gableRoof(b, iso, s));
+  else if (b.mansard && fc.topVisible) fills = fills.concat(mansardRoof(b, iso, s));
   else if (fc.topVisible) { fills.push(fc.top); quad(fc.top, s); }
   if (fc.bottomVisible) { fills.push(fc.bottom); quad(fc.bottom, s); }
   quad(fc.fx, s); quad(fc.fy, s);
   if (b.tower) towerLines(b, iso, s);
-  if (b.terrace && !b.gable && fc.topVisible) terraceLines(b, iso, s);
+  if (b.terrace && !b.gable && !b.mansard && fc.topVisible) terraceLines(b, iso, s);
   if (b.openings && !b.tower) openings(b, iso, s, glows, F.r || function () { return 1; });
   if (b.columns) columns(b, iso, s);
   if (b.lift) guides(b, iso, s);
   var Px = fc.fx[0], Ux = [fc.fx[3][0] - Px[0], fc.fx[3][1] - Px[1]], Vx = [fc.fx[1][0] - Px[0], fc.fx[1][1] - Px[1]];
-  if (!b.tower && !b.openings) {
+  if (!b.tower && !b.openings && !b.facade) {
     if (F.hatchlight) {
       hatchFace(Px, Ux, Vx, 6, s);
       var Py = fc.fy[0], Uy = [fc.fy[3][0] - Py[0], fc.fy[3][1] - Py[1]], Vy = [fc.fy[1][0] - Py[0], fc.fy[1][1] - Py[1]];
@@ -193,9 +212,13 @@ function groundContext(r, boxes, g, iso) {
 }
 
 /** The massing scene: generated in unit space, measured, and fitted to region R = {x, y, w, h}.
-    opts: see MASSING_OPTIONS. Returns items. */
+    opts: see MASSING_OPTIONS, plus `perspective` and `randomize`. Any facade flag on gives every
+    non-tower box a facade on its two visible faces; street flags add the street set along the
+    plot's two street edges. Returns items, with the resolved options on `items.options`. */
 export function massing3(r, R, opts) {
-  var F = resolve('massing', opts), boxes = [], g = 8;
+  opts = randomizeOptions('massing', r, opts || {});
+  var F = resolve('massing', opts), boxes = [], g = 8, facades = wantsFacades(F), streets = wantsStreet(F);
+  F.sunRight = r() < 0.5;
   function baseAt(x, y, dx, dy) { var z = 0; boxes.forEach(function (b) { if (x < b.x + b.dx && x + dx > b.x && y < b.y + b.dy && y + dy > b.y) z = Math.max(z, b.z + b.dz); }); return z; }
   if (F.terraces) terraceStacks(r, boxes, baseAt); else boxes = massing(r, { count: 14, grid: g });
   if (F.courtyards) courtyardBlocks(r, boxes, baseAt, g);
@@ -205,7 +228,9 @@ export function massing3(r, R, opts) {
   function isTop(b) { return !boxes.some(function (o) { return o !== b && o.z === b.z + b.dz && o.x < b.x + b.dx && o.x + o.dx > b.x && o.y < b.y + b.dy && o.y + o.dy > b.y; }); }
   boxes.forEach(function (b) {
     if (F.gables && !b.tower && isTop(b) && r() < 0.5) b.gable = true;
-    if (F.openings && !b.tower) b.openings = true;
+    else if (F.mansards && !b.tower && isTop(b) && r() < 0.5) b.mansard = true;
+    if (F.openings && !b.tower && !facades) b.openings = true;
+    if (facades && !b.tower) b.facade = true;
     if (F.exploded) b.lift = b.z * 0.6 + (b.z > 0 ? 0.6 : 0);
   });
   boxes.sort(painterOrder);
@@ -216,8 +241,10 @@ export function massing3(r, R, opts) {
     raw = function (x, y, z) { return cam([x, y, z]); };
   }
   var x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-  var pad = F.ground ? 1.2 : 0;
-  boxes.concat([{ x: -pad, y: -pad, z: 0, dx: g + 2 * pad, dy: g + 2 * pad, dz: 0 }]).forEach(function (b) {
+  var pad = F.ground ? 1.2 : 0, reach = streets ? streetReach(F) : 0;
+  var extents = [{ x: -pad, y: -pad, z: 0, dx: g + 2 * pad, dy: g + 2 * pad, dz: 0 }];
+  if (reach) extents.push({ x: 0, y: 0, z: 0, dx: g + reach, dy: g + reach, dz: 0 });
+  boxes.concat(extents).forEach(function (b) {
     for (var c = 0; c < 8; c++) {
       var p = raw(b.x + (c & 1 ? b.dx : 0), b.y + (c & 2 ? b.dy : 0), b.z + lift(b) + (c & 4 ? b.dz + (b.gable ? b.dy * 0.45 : 0.3) : 0));
       x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]);
@@ -227,7 +254,22 @@ export function massing3(r, R, opts) {
   var ox = R.x + (R.w - (x1 - x0) * u) / 2 - x0 * u, oy = R.y + R.h * 0.94 - y1 * u;
   var iso = cam ? function (x, y, z) { var p = raw(x, y, z); return [ox + p[0] * u, oy + p[1] * u]; } : makeIso(ox, oy, u, deg), items = [];
   if (F.ground) items.push({ strokes: groundContext(r, boxes, g, iso) });
-  var flags = { hatchlight: F.hatchlight, r: r, cam: cam };
-  boxes.forEach(function (b) { items.push(boxDrawing2(b, iso, u, flags)); });
+  var flags = { hatchlight: F.hatchlight, r: r, cam: cam }, gates = [[], []];
+  boxes.forEach(function (b) {
+    var item = boxDrawing2(b, iso, u, flags);
+    items.push(item);
+    if (!b.facade) return;
+    var ground = b.z === 0 && !b.lift, rec = boxRecipe(r, F);
+    ['x', 'y'].forEach(function (which) {
+      var atEdge = which === 'x' ? b.x + b.dx === g : b.y + b.dy === g;
+      var fd = faceFacade(r, iso, b, which, rec, ground, ground && (atEdge || which === 'x'));
+      item.strokes = item.strokes.concat(fd.strokes);
+      item.glows = (item.glows || []).concat(fd.glows);
+      fd.extras.forEach(function (ex) { items.push({ fills: ex.fills, glows: ex.glows, strokes: ex.strokes }); });
+      if (fd.door && atEdge) { var along = (which === 'x' ? b.y : b.x) * FACADE_UNITS; gates[which === 'x' ? 0 : 1].push([along + fd.door[0], along + fd.door[1]]); }
+    });
+  });
+  if (streets) streetAround(r, iso, g, F, gates).forEach(function (it) { items.push(it); });
+  items.options = F;
   return items;
 }

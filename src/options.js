@@ -56,15 +56,51 @@ export var CORNER_OPTIONS = [
   flag('mansards', 'roof', false, 'A mansard storey with dormers on some buildings.')
 ];
 
-/** Massing flags. */
+/** Massing flags. The facade families (windows, ornament, millwork, ink, street, depth, roof)
+    mirror the street corner's: any of them on gives every non-tower box a facade on its two
+    visible faces, drawn with the corner's own grammar scaled so one box unit is one floor. */
 export var MASSING_OPTIONS = [
   flag('terraces', 'massing', true, 'Stacks that step back as they rise, with railings.'),
   flag('towers', 'massing', true, 'Tall thin volumes with floor lines and mullions.'),
   flag('courtyards', 'massing', false, 'L and U shaped footprints with inner faces.'),
   flag('cantilevers', 'massing', false, 'Upper boxes that overhang on thin columns.'),
-  flag('hatchlight', 'light', true, 'Three hatch weights as a light study.'),
-  flag('openings', 'windows', false, 'Windows on the visible faces on a floor grid.'),
+  flag('hatchlight', 'light', true, 'Three hatch weights as a light study on blank faces.'),
+  flag('openings', 'windows', false, 'Plain window rectangles on a floor grid when no window family is on.'),
+  flag('winRect', 'windows', false, 'Facade windows: plain rectangles in the family pool.'),
+  flag('winArch', 'windows', false, 'Facade windows: round-arched in the pool.'),
+  flag('winTall', 'windows', false, 'Facade windows: tall and narrow in the pool.'),
+  flag('winPaired', 'windows', false, 'Facade windows: paired with a mullion in the pool.'),
+  flag('winGrid', 'windows', false, 'Facade windows: industrial grids of panes in the pool.'),
+  flag('brackets', 'ornament', false, 'Brackets under the cornice line of each face.'),
+  flag('quoins', 'ornament', false, 'Alternating quoins at the box edges.'),
+  flag('keystones', 'ornament', false, 'Keystones over arched windows.'),
+  flag('rustication', 'ornament', false, 'Rustication joints across ground floors.'),
+  flag('architraves', 'millwork', false, 'A moulded surround around each window.'),
+  flag('lintels', 'millwork', false, 'A flat lintel over each window.'),
+  flag('shutters', 'millwork', false, 'Louvred shutters flanking windows.'),
+  flag('stringCourses', 'millwork', false, 'A shallow band between floors.'),
+  flag('dentils', 'millwork', false, 'A row of small blocks under the cornice.'),
+  flag('pediments', 'millwork', false, 'Triangular pediments over some windows.'),
+  flag('pilasters', 'millwork', false, 'Flat columns between bays.'),
+  flag('transoms', 'millwork', false, 'A transom light over each ground-floor opening.'),
+  flag('parapetCaps', 'millwork', false, 'A coping cap along the top of each face.'),
+  flag('fireEscapes', 'millwork', false, 'An iron fire escape on one bay of some boxes.'),
+  flag('bays', 'ink', false, 'Curved bay windows projecting from a face across several floors.'),
+  flag('deepCornice', 'ink', false, 'A projecting cornice with brackets, dentils and a hatched soffit.'),
+  flag('shadowHatch', 'ink', false, 'Shade hatching in the reveals and under every projection.'),
+  flag('fence', 'ink', false, 'An iron fence along the two street edges of the plot, with gates at doors.'),
+  flag('stoop', 'ink', false, 'Steps and cheek walls up to every door.'),
+  flag('planters', 'ink', false, 'Planter boxes with foliage at ground level and on balconies.'),
+  flag('arches', 'ink', false, 'Round-arched openings at ground level and behind balconies.'),
+  flag('kerb', 'street', false, 'The kerb along the two street edges of the plot.'),
+  flag('roadDashes', 'street', false, 'Centre-line dashes on the streets.'),
+  flag('lamps', 'street', false, 'Lamp posts along the pavements.'),
+  flag('trees', 'street', false, 'Trees grown by a branching rule along the pavements.'),
+  flag('balconies', 'depth', false, 'Balconies with railings projecting from the faces.'),
+  flag('awnings', 'depth', false, 'Striped awnings over ground-floor openings.'),
+  flag('rooftops', 'roof', false, 'Chimneys, tanks, bulkheads, antennas, billboards on flat roofs.'),
   flag('gables', 'roof', false, 'Pitched roofs on some boxes.'),
+  flag('mansards', 'roof', false, 'A sloped mansard storey on some boxes, with slate lines.'),
   flag('ground', 'context', false, 'Plot boundary, paths and trees under the model.'),
   flag('exploded', 'context', false, 'Lift each level apart with dashed guide lines.'),
   flag('randomAngle', 'camera', false, 'A different dimetric angle per seed (axonometric only).')
@@ -139,6 +175,27 @@ export function resolve(kind, opts) {
     }
     out[p.name] = v;
   });
+  return out;
+}
+
+/** Randomize: choose a random subset of a kind's flags with coverage drawn uniformly between
+    `opts.randomize` (a fraction, 0 to 1) and 1. Flags named explicitly in opts are pinned and left
+    out of the draw; camera flags (family 'camera') and params are never randomized. Consumes the
+    generator r, so the choice is part of the seed and reproducible. Returns a new options object
+    without the `randomize` key; returns opts untouched when randomize is 0 or absent. */
+export function randomizeOptions(kind, r, opts) {
+  var frac = Number(opts && opts.randomize) || 0, out = {}, k;
+  if (!(frac > 0)) {
+    if (!opts || !('randomize' in opts)) return opts;
+    for (k in opts) if (k !== 'randomize') out[k] = opts[k];   // a zero leaves no trace
+    return out;
+  }
+  frac = Math.min(1, frac);
+  var pool = (OPTIONS[kind] || []).filter(function (f) { return f.family !== 'camera' && !(f.name in opts); }).map(function (f) { return f.name; });
+  var coverage = frac + r() * (1 - frac), n = Math.round(coverage * pool.length);
+  for (var i = pool.length - 1; i > 0; i--) { var j = Math.floor(r() * (i + 1)), t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
+  for (k in opts) if (k !== 'randomize') out[k] = opts[k];
+  pool.forEach(function (name, idx) { out[name] = idx < n; });
   return out;
 }
 

@@ -7,7 +7,7 @@
 import { pick } from './random.js';
 import { pinhole } from './camera.js';
 import { windowOf } from './grammar.js';
-import { resolve, PRESETS } from './options.js';
+import { resolve, PRESETS, randomizeOptions } from './options.js';
 import * as mw from './millwork.js';
 import * as ink from './ink.js';
 
@@ -16,19 +16,22 @@ function side(isRight) {
   return { pt: isRight ? function (d, h, e) { return [d, -e, h]; } : function (d, h, e) { return [-e, d, h]; } };
 }
 
-/** Resolve options: apply a named preset, expand the legacy shorthands, then fill defaults. */
-function cornerOptions(opts) {
+/** Resolve options: apply a named preset, expand the legacy shorthands, draw the randomized
+    subset if asked (preset flags count as pinned), then fill defaults. r is the generator, so a
+    randomized choice belongs to the seed. */
+function cornerOptions(r, opts) {
   var merged = {};
   if (opts && opts.preset && PRESETS.corner[opts.preset]) Object.assign(merged, PRESETS.corner[opts.preset]);
   if (opts) for (var k in opts) if (k !== 'preset') merged[k] = opts[k];
   if (opts && opts.pitch) merged.perspective = 3;
+  merged = randomizeOptions('corner', r, merged);
   var o = resolve('corner', merged);
   if (opts && opts.full) { o.backRow = true; o.balconies = true; o.awnings = true; o.setbacks = true; o.closeCamera = true; }
   return o;
 }
 
 /** Ornament on a facade: cornice brackets, rustication joints, alternating quoins. */
-function ornament(o, g) {
+export function ornament(o, g) {
   if (o.brackets && !o.deepCornice) for (var d = 0.4; d < g.W; d += 0.6) g.line(d, g.H - 0.3, d, g.H - 0.6, 0);
   if (o.rustication && g.gh > 0) for (var hh = 0.6; hh < g.gh; hh += 0.6) g.line(0, hh, g.W, hh, 0);
   if (o.quoins) for (var q = g.gh; q < g.H - 0.6; q += g.fh / 2) {
@@ -38,7 +41,7 @@ function ornament(o, g) {
 }
 
 /** A balcony projecting from the facade under one window: slab, returns, railing posts, foliage. */
-function balcony(r, o, g, d0, d1, bh) {
+export function balcony(r, o, g, d0, d1, bh) {
   var e = 1.1, a0 = d0 - 0.15, a1 = d1 + 0.15, line = g.line;
   line(a0, bh, a1, bh, e); line(a0, bh + 0.15, a1, bh + 0.15, e);
   line(a0, bh, a0, bh, 0, e); line(a1, bh, a1, bh, 0, e); line(a0, bh + 0.15, a0, bh + 0.15, 0, e); line(a1, bh + 0.15, a1, bh + 0.15, 0, e);
@@ -49,14 +52,14 @@ function balcony(r, o, g, d0, d1, bh) {
 }
 
 /** A striped awning over a ground-floor bay. */
-function awning(d0, d1, gh, line) {
+export function awning(d0, d1, gh, line) {
   var t0 = gh * 0.8, t1 = gh * 0.62, ea = 1.4;
   line(d0, t0, d1, t0, 0); line(d0, t1, d1, t1, ea); line(d0, t0, d0, t1, 0, ea); line(d1, t0, d1, t1, 0, ea);
   for (var k = 1; k < 4; k++) { var dd = d0 + (d1 - d0) * k / 4; line(dd, t0, dd, t1, 0, ea); }
 }
 
 /** Rooftop objects set a little behind the parapet. */
-function rooftops(r, g) {
+export function rooftops(r, g) {
   var n = Math.floor(r() * 3.4), used = 1, W = g.W, H = g.H;
   for (var i = 0; i < n && used < W - 4; i++) {
     var d = used + r() * 1.5, kind = pick(r, ['chimney', 'tank', 'bulkhead', 'antenna', 'billboard']), e = -(1 + r() * 3);
@@ -69,7 +72,7 @@ function rooftops(r, g) {
 }
 
 /** The window trim chosen for one building, applied around one opening. */
-function trim(o, g, d0, h0, d1, h1) {
+export function trim(o, g, d0, h0, d1, h1) {
   if (o.architraves) mw.architrave(g, d0, h0, d1, h1);
   if (o.lintels) mw.lintel(g, d0, h0, d1, h1);
   if (o.shutters) mw.shutters(g, d0, h0, d1, h1);
@@ -86,7 +89,7 @@ function bayColumns(r, o, g, bays) {
 
 /** The upper floors of a building: windows, sills, trim, shade, balconies. Bay columns are skipped
     on the floors their bay window covers. */
-function floors(r, o, g, bays, rb, win, bayCols) {
+export function floors(r, o, g, bays, rb, win, bayCols) {
   var archWin = windowOf('arch', g.line, function (a, b, c, d) { g.rect(a, b, c, d, 0); });
   for (var fl = 0; fl < g.F; fl++) {
     var base = g.gh + fl * g.fh, balconyFloor = o.balconies && r() < 0.4;
@@ -107,7 +110,7 @@ function floors(r, o, g, bays, rb, win, bayCols) {
 
 /** The ground floor: a door in one bay and shopfronts in the rest, with transoms, awnings, arches,
     planters and a stoop as their flags allow. Returns the door's d-range for the fence gate. */
-function groundFloor(r, o, g, bays, rb, door) {
+export function groundFloor(r, o, g, bays, rb, door) {
   var archWin = windowOf('arch', g.line, function (a, b, c, d) { g.rect(a, b, c, d, 0); }), range = null;
   for (var b = 0; b < bays; b++) {
     var d0 = b * rb + rb * 0.25, d1 = (b + 1) * rb - rb * 0.25;
@@ -133,7 +136,7 @@ function groundFloor(r, o, g, bays, rb, door) {
 
 /** The drawing helper for one building: projected line, rect, fill and glow in facade coordinates,
     plus item() for pieces that project and must paint over the wall behind them. */
-function helper(cam, S, o, strokes, fills, glows, r) {
+export function helper(cam, S, o, strokes, fills, glows, r) {
   var h0 = o.h0 || 0;
   function P(d, h, e) { return cam(S.pt(o.off + d, h0 + h, e || 0)); }
   var g = {
@@ -194,7 +197,7 @@ function gap(r, cam, S, off, gh) {
 
 /** Street furniture along one side, each family behind its flag: kerb, road dashes, lamps, trees,
     and the fence with gates at the doors. */
-function street(r, cam, S, L, o, gates) {
+export function street(r, cam, S, L, o, gates) {
   var strokes = [];
   function P(d, h, e) { return cam(S.pt(d, h, e)); }
   if (o.kerb) strokes.push([P(0, 0, 3), P(L, 0, 3)], [P(0, 0.15, 3), P(L, 0.15, 3)], [P(0, 0.15, 3.2), P(L, 0.15, 3.2)]);
@@ -226,7 +229,7 @@ function backRow(r, cam, S, L) {
 }
 
 /** The window family pool allowed by the flags; rect when every family is off. */
-function windowPool(o) {
+export function windowPool(o) {
   var pool = [];
   if (o.winRect) pool.push('rect'); if (o.winArch) pool.push('arch'); if (o.winTall) pool.push('tall');
   if (o.winPaired) pool.push('paired'); if (o.winGrid) pool.push('grid');
@@ -313,9 +316,10 @@ function cornerCamera(r, o) {
 }
 
 /** The street corner. r: generator. R: region {x, y, w, h}. opts: any CORNER_OPTIONS flags,
-    `perspective` 2 or 3, `preset`, plus the shorthands pitch and full. Returns items. */
+    `perspective` 2 or 3, `preset`, `randomize` (fraction), plus the shorthands pitch and full.
+    Returns items, with the resolved options on `items.options`. */
 export function corner4(r, R, opts) {
-  var o = cornerOptions(opts);
+  var o = cornerOptions(r, opts);
   o.sunRight = r() < 0.5;
   var cam = cornerCamera(r, o);
   var sides = [[side(false), 26 + r() * 20], [side(true), 44 + r() * 30]], items = [], front = [], gates = [[], []];
@@ -331,7 +335,9 @@ export function corner4(r, R, opts) {
   front.forEach(function (it) { items.push(it); });
   if (o.roundedCorner) { var cr = ink.roundedCorner(r, cam, rc, first, o); items.push(cr); }
   sides.forEach(function (sd, k) { items.push({ strokes: street(r, cam, sd[0], sd[1], o, gates[k]) }); });
-  return fitToRegion(items, cam([0, 0, 0]), R);
+  var out = fitToRegion(items, cam([0, 0, 0]), R);
+  out.options = o;   // the resolved flags in effect, including any randomized draw
+  return out;
 }
 
 /** Friendlier name for the same generator. */

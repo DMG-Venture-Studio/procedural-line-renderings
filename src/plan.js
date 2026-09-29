@@ -1,5 +1,5 @@
 /* A floor plan by recursive subdivision: rooms, walls with thickness, door swings, windows, a stair. */
-import { resolve } from './options.js';
+import { randomizeOptions, resolve } from './options.js';
 
 /** A stroke from (a, b) to (c, d). */
 function L(a, b, c, d) { return [[a, b], [c, d]]; }
@@ -72,6 +72,7 @@ function stair(rooms) {
 
 /** The floor plan. r: generator. R: region. opts: see PLAN_OPTIONS. Returns items. */
 export function plan(r, R, opts) {
+  opts = randomizeOptions('plan', r, opts || {});
   var F = resolve('plan', opts), items = [], x0 = R.x + R.w * 0.06, y0 = R.y + R.h * 0.1, W = R.w * 0.88, H = R.h * 0.78, t = 6, T = 10;
   var rooms = [], parts = [];
   subdivide(r, x0, y0, W, H, 5, rooms, parts);
@@ -81,5 +82,6 @@ export function plan(r, R, opts) {
   if (F.windows) items.push({ strokes: windows(rooms, x0, y0, W, H, T) });
   parts.forEach(function (p) { items.push({ strokes: partition(r, p, t, !!F.doors) }); });
   if (F.stair) items.push({ strokes: stair(rooms) });
+  items.options = F;
   return items;
 }

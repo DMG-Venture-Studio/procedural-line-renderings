@@ -6,11 +6,11 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const ORDER = ['random', 'camera', 'options', 'grammar', 'millwork', 'ink', 'wfc', 'render', 'massing', 'corner', 'skyline', 'plan', 'components'];
+const ORDER = ['random', 'camera', 'options', 'grammar', 'millwork', 'ink', 'wfc', 'render', 'corner', 'facades', 'massing', 'skyline', 'plan', 'components'];
 const EXPORTS = ['rng', 'hashSeed', 'clockSeed', 'pick', 'makeIso', 'facadePoint', 'pinhole', 'facesCamera', 'fitSimilarity', 'windowOf', 'facade', 'facade2', 'gapElement',
-  'OPTIONS', 'CORNER_OPTIONS', 'MASSING_OPTIONS', 'SKYLINE_OPTIONS', 'PLAN_OPTIONS', 'PARAMS', 'PRESETS', 'GLOW_KINDS', 'defaults', 'resolve', 'diffFromDefaults',
-  'wfc', 'massing', 'painterOrder', 'hatchFace', 'boxDrawing', 'boxDrawing2', 'massing3', 'corner4', 'streetCorner', 'skyline', 'plan',
-  'renderTo', 'totalLength', 'speedsFor', 'drawIn', 'bounce', 'reducedMotion', 'defineComponents', 'snippetFor', 'TAGS', 'NIGHT'];
+  'OPTIONS', 'CORNER_OPTIONS', 'MASSING_OPTIONS', 'SKYLINE_OPTIONS', 'PLAN_OPTIONS', 'PARAMS', 'PRESETS', 'GLOW_KINDS', 'defaults', 'resolve', 'diffFromDefaults', 'randomizeOptions',
+  'wfc', 'faceFacade', 'massing', 'painterOrder', 'hatchFace', 'boxDrawing', 'boxDrawing2', 'massing3', 'corner4', 'streetCorner', 'skyline', 'plan',
+  'renderTo', 'totalLength', 'speedsFor', 'drawIn', 'bounce', 'reducedMotion', 'defineComponents', 'snippetFor', 'declaredOptions', 'TAGS', 'NIGHT'];
 
 /** Strip module syntax from one source file so it can share a single scope. The millwork module
     is imported as a namespace (`mw`), so its functions are re-exposed under that name. */

@@ -26,8 +26,11 @@ export var TAGS = { corner: 'dmg-street-corner', massing: 'dmg-massing', skyline
 /** True when a kind has a perspective param. */
 function hasPerspective(kind) { return (PARAMS[kind] || []).some(function (p) { return p.name === 'perspective'; }); }
 
-/** Parse the options attribute (JSON) plus the perspective, preset, pitch and full attributes. */
-function readOptions(el, kind) {
+/** The options an element declares, sparse: the `options` JSON, a preset's flags, and the
+    perspective, pitch, full and randomize attributes. Only these keys reach the generator, so a
+    randomized draw can tell a declared flag (pinned) from an unmentioned one (eligible). Takes
+    any object with getAttribute and hasAttribute, so it can be tested without a DOM. */
+export function declaredOptions(el, kind) {
   var raw = el.getAttribute('options'), parsed = {};
   if (raw) { try { parsed = JSON.parse(raw) || {}; } catch (e) { parsed = {}; } }
   if (kind === 'corner') {
@@ -37,7 +40,14 @@ function readOptions(el, kind) {
     if (el.hasAttribute('full')) { parsed.backRow = true; parsed.balconies = true; parsed.awnings = true; parsed.setbacks = true; parsed.closeCamera = true; }
   }
   if (hasPerspective(kind) && el.getAttribute('perspective') !== null && el.getAttribute('perspective') !== '') parsed.perspective = Number(el.getAttribute('perspective'));
-  return resolve(kind, parsed);
+  var rnd = Number(el.getAttribute('randomize'));
+  if (rnd > 0) parsed.randomize = Math.min(1, rnd);
+  return parsed;
+}
+
+/** The declared options with defaults filled in and params validated. */
+function readOptions(el, kind) {
+  return resolve(kind, declaredOptions(el, kind));
 }
 
 /** Read the element's attributes into a plain object with defaults, night mode applied. Kinds
@@ -54,7 +64,8 @@ function readAttrs(el, kind) {
     glow: canGlow ? (glow != null && glow !== '' ? glow : (night ? NIGHT.glow : null)) : null,
     glowProb: base.glowProb,
     night: night,
-    options: readOptions(el, kind)
+    options: readOptions(el, kind),
+    declared: declaredOptions(el, kind)
   };
 }
 
@@ -76,6 +87,7 @@ export function snippetFor(el, kind) {
   if (kind === 'corner' && el.getAttribute('preset')) parts.push('preset="' + el.getAttribute('preset') + '"');
   var diff = diffFromDefaults(kind, a.options);
   if (hasPerspective(kind) && diff.perspective !== undefined) { parts.push('perspective="' + diff.perspective + '"'); delete diff.perspective; }
+  if (Number(el.getAttribute('randomize')) > 0) parts.push('randomize="' + Math.min(1, Number(el.getAttribute('randomize'))) + '"');
   if (a.night) parts.push('night');
   if (el.getAttribute('color')) parts.push('color="' + el.getAttribute('color') + '"');
   if (el.getAttribute('page')) parts.push('page="' + el.getAttribute('page') + '"');
@@ -90,12 +102,16 @@ export function snippetFor(el, kind) {
 /** Build the element class for one generator kind. Defined lazily so the module loads without a DOM. */
 function makeClass(kind) {
   return class extends HTMLElement {
-    static get observedAttributes() { return ['seed', 'reseed', 'mode', 'pitch', 'full', 'color', 'page', 'glow', 'night', 'options', 'perspective', 'preset']; }
+    static get observedAttributes() { return ['seed', 'reseed', 'mode', 'pitch', 'full', 'color', 'page', 'glow', 'night', 'options', 'perspective', 'preset', 'randomize']; }
 
     constructor() {
       super();
-      this._stop = null; this._seed = null; this._canvas = null; this._ro = null;
+      this._stop = null; this._seed = null; this._canvas = null; this._ro = null; this._resolved = null;
     }
+
+    /** The flags actually in effect for the drawing on the canvas: the declared options with any
+        randomized draw applied. Null before the first draw. */
+    get resolvedOptions() { return this._resolved; }
 
     /** The seed of the drawing currently shown. Setting it redraws with that seed. */
     get seed() { return this._seed; }
@@ -128,12 +144,14 @@ function makeClass(kind) {
     /** Draw a new sibling from a fresh clock seed, regardless of the seed attribute. */
     regenerate() { this._start(clockSeed(kind)); }
 
-    /** One drawing at the given seed (or the attribute, or the clock), with its plotting speeds. */
+    /** One drawing at the given seed (or the attribute, or the clock), with its plotting speeds.
+        Fires the `seed` event after generating, with the seed and the resolved options. */
     _fresh(region, attrs, forced) {
       var seed = forced != null ? forced : (attrs.seed != null ? attrs.seed : clockSeed(kind));
       this._seed = seed;
-      this.dispatchEvent(new CustomEvent('seed', { detail: { seed: seed } }));
-      var items = GENERATORS[kind](rng(seed), region, attrs.options), sp = speedsFor(items, 7, 4);
+      var items = GENERATORS[kind](rng(seed), region, attrs.declared), sp = speedsFor(items, 7, 4);
+      this._resolved = items.options || attrs.options;
+      this.dispatchEvent(new CustomEvent('seed', { detail: { seed: seed, options: this._resolved } }));
       return { items: items, pxPerSecond: sp.pxPerSecond, pxPerSecondOut: sp.pxPerSecondOut };
     }
 

@@ -156,15 +156,51 @@ var CORNER_OPTIONS = [
   flag('mansards', 'roof', false, 'A mansard storey with dormers on some buildings.')
 ];
 
-/** Massing flags. */
+/** Massing flags. The facade families (windows, ornament, millwork, ink, street, depth, roof)
+    mirror the street corner's: any of them on gives every non-tower box a facade on its two
+    visible faces, drawn with the corner's own grammar scaled so one box unit is one floor. */
 var MASSING_OPTIONS = [
   flag('terraces', 'massing', true, 'Stacks that step back as they rise, with railings.'),
   flag('towers', 'massing', true, 'Tall thin volumes with floor lines and mullions.'),
   flag('courtyards', 'massing', false, 'L and U shaped footprints with inner faces.'),
   flag('cantilevers', 'massing', false, 'Upper boxes that overhang on thin columns.'),
-  flag('hatchlight', 'light', true, 'Three hatch weights as a light study.'),
-  flag('openings', 'windows', false, 'Windows on the visible faces on a floor grid.'),
+  flag('hatchlight', 'light', true, 'Three hatch weights as a light study on blank faces.'),
+  flag('openings', 'windows', false, 'Plain window rectangles on a floor grid when no window family is on.'),
+  flag('winRect', 'windows', false, 'Facade windows: plain rectangles in the family pool.'),
+  flag('winArch', 'windows', false, 'Facade windows: round-arched in the pool.'),
+  flag('winTall', 'windows', false, 'Facade windows: tall and narrow in the pool.'),
+  flag('winPaired', 'windows', false, 'Facade windows: paired with a mullion in the pool.'),
+  flag('winGrid', 'windows', false, 'Facade windows: industrial grids of panes in the pool.'),
+  flag('brackets', 'ornament', false, 'Brackets under the cornice line of each face.'),
+  flag('quoins', 'ornament', false, 'Alternating quoins at the box edges.'),
+  flag('keystones', 'ornament', false, 'Keystones over arched windows.'),
+  flag('rustication', 'ornament', false, 'Rustication joints across ground floors.'),
+  flag('architraves', 'millwork', false, 'A moulded surround around each window.'),
+  flag('lintels', 'millwork', false, 'A flat lintel over each window.'),
+  flag('shutters', 'millwork', false, 'Louvred shutters flanking windows.'),
+  flag('stringCourses', 'millwork', false, 'A shallow band between floors.'),
+  flag('dentils', 'millwork', false, 'A row of small blocks under the cornice.'),
+  flag('pediments', 'millwork', false, 'Triangular pediments over some windows.'),
+  flag('pilasters', 'millwork', false, 'Flat columns between bays.'),
+  flag('transoms', 'millwork', false, 'A transom light over each ground-floor opening.'),
+  flag('parapetCaps', 'millwork', false, 'A coping cap along the top of each face.'),
+  flag('fireEscapes', 'millwork', false, 'An iron fire escape on one bay of some boxes.'),
+  flag('bays', 'ink', false, 'Curved bay windows projecting from a face across several floors.'),
+  flag('deepCornice', 'ink', false, 'A projecting cornice with brackets, dentils and a hatched soffit.'),
+  flag('shadowHatch', 'ink', false, 'Shade hatching in the reveals and under every projection.'),
+  flag('fence', 'ink', false, 'An iron fence along the two street edges of the plot, with gates at doors.'),
+  flag('stoop', 'ink', false, 'Steps and cheek walls up to every door.'),
+  flag('planters', 'ink', false, 'Planter boxes with foliage at ground level and on balconies.'),
+  flag('arches', 'ink', false, 'Round-arched openings at ground level and behind balconies.'),
+  flag('kerb', 'street', false, 'The kerb along the two street edges of the plot.'),
+  flag('roadDashes', 'street', false, 'Centre-line dashes on the streets.'),
+  flag('lamps', 'street', false, 'Lamp posts along the pavements.'),
+  flag('trees', 'street', false, 'Trees grown by a branching rule along the pavements.'),
+  flag('balconies', 'depth', false, 'Balconies with railings projecting from the faces.'),
+  flag('awnings', 'depth', false, 'Striped awnings over ground-floor openings.'),
+  flag('rooftops', 'roof', false, 'Chimneys, tanks, bulkheads, antennas, billboards on flat roofs.'),
   flag('gables', 'roof', false, 'Pitched roofs on some boxes.'),
+  flag('mansards', 'roof', false, 'A sloped mansard storey on some boxes, with slate lines.'),
   flag('ground', 'context', false, 'Plot boundary, paths and trees under the model.'),
   flag('exploded', 'context', false, 'Lift each level apart with dashed guide lines.'),
   flag('randomAngle', 'camera', false, 'A different dimetric angle per seed (axonometric only).')
@@ -239,6 +275,27 @@ function resolve(kind, opts) {
     }
     out[p.name] = v;
   });
+  return out;
+}
+
+/** Randomize: choose a random subset of a kind's flags with coverage drawn uniformly between
+    `opts.randomize` (a fraction, 0 to 1) and 1. Flags named explicitly in opts are pinned and left
+    out of the draw; camera flags (family 'camera') and params are never randomized. Consumes the
+    generator r, so the choice is part of the seed and reproducible. Returns a new options object
+    without the `randomize` key; returns opts untouched when randomize is 0 or absent. */
+function randomizeOptions(kind, r, opts) {
+  var frac = Number(opts && opts.randomize) || 0, out = {}, k;
+  if (!(frac > 0)) {
+    if (!opts || !('randomize' in opts)) return opts;
+    for (k in opts) if (k !== 'randomize') out[k] = opts[k];   // a zero leaves no trace
+    return out;
+  }
+  frac = Math.min(1, frac);
+  var pool = (OPTIONS[kind] || []).filter(function (f) { return f.family !== 'camera' && !(f.name in opts); }).map(function (f) { return f.name; });
+  var coverage = frac + r() * (1 - frac), n = Math.round(coverage * pool.length);
+  for (var i = pool.length - 1; i > 0; i--) { var j = Math.floor(r() * (i + 1)), t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
+  for (k in opts) if (k !== 'randomize') out[k] = opts[k];
+  pool.forEach(function (name, idx) { out[name] = idx < n; });
   return out;
 }
 
@@ -790,239 +847,6 @@ function bounce(ctx, items, opts) {
   return function () { stopped = true; };
 }
 
-/* ---- massing.js ---- */
-/* Axonometric massing: box clusters, decorated box drawings, and the fitted massing scene.
-   Every feature is a flag in MASSING_OPTIONS (src/options.js). */
-
-/** A seeded cluster of stacked boxes on a grid, sorted far to near for painter's order.
-    opts: count, grid. Returns [{x, y, z, dx, dy, dz}]. */
-function massing(r, opts) {
-  var n = opts.count || 14, g = opts.grid || 6, boxes = [], height = {};
-  for (var i = 0; i < n; i++) {
-    var dx = 1 + Math.floor(r() * 3), dy = 1 + Math.floor(r() * 3);
-    var x = Math.floor(r() * (g - dx + 1)), y = Math.floor(r() * (g - dy + 1));
-    var base = 0;
-    for (var ix = x; ix < x + dx; ix++) for (var iy = y; iy < y + dy; iy++) base = Math.max(base, height[ix + ',' + iy] || 0);
-    var dz = 1 + Math.floor(r() * 4);
-    for (ix = x; ix < x + dx; ix++) for (iy = y; iy < y + dy; iy++) height[ix + ',' + iy] = base + dz;
-    boxes.push({ x: x, y: y, z: base, dx: dx, dy: dy, dz: dz });
-  }
-  boxes.sort(painterOrder);
-  return boxes;
-}
-
-/** Painter's order for axis-aligned boxes viewed from +x, +y, +z: by the sum of centre coordinates. */
-function painterOrder(a, b) {
-  return (a.x + a.dx / 2 + a.y + a.dy / 2 + a.z + a.dz / 2) - (b.x + b.dx / 2 + b.y + b.dy / 2 + b.z + b.dz / 2);
-}
-
-/** Hatch a parallelogram face with origin P and edge vectors U, V: lines parallel to V spaced along U. */
-function hatchFace(P, U, V, spacing, out) {
-  var L = Math.hypot(U[0], U[1]);
-  for (var k = spacing; k < L; k += spacing) { var a = [P[0] + U[0] * k / L, P[1] + U[1] * k / L]; out.push([a, [a[0] + V[0], a[1] + V[1]]]); }
-}
-
-/** Visible faces of a box plus hatch lines on the +x face. iso: projection. Returns {fills, strokes}. */
-function boxDrawing(b, iso, hatchSpacing) {
-  return boxDrawing2(b, iso, 1, { hatch: hatchSpacing });
-}
-
-/** The lift applied to a box in an exploded view (zero otherwise). */
-function lift(b) { return b.lift || 0; }
-
-/** The visible face polygons of a box: +x face, +y face, and the top, or the underside when a
-    perspective camera (F.cam) stands below the box, or neither when it stands between. */
-function faces(b, iso, F) {
-  var X = b.x + b.dx, Y = b.y + b.dy, z0 = b.z + lift(b), Z = z0 + b.dz, cz = F && F.cam ? F.cam.C[2] : Infinity;
-  var out = {
-    fx: [iso(X, b.y, z0), iso(X, Y, z0), iso(X, Y, Z), iso(X, b.y, Z)],
-    fy: [iso(b.x, Y, z0), iso(X, Y, z0), iso(X, Y, Z), iso(b.x, Y, Z)],
-    topVisible: cz > Z, bottomVisible: cz < z0
-  };
-  if (out.topVisible) out.top = [iso(b.x, b.y, Z), iso(X, b.y, Z), iso(X, Y, Z), iso(b.x, Y, Z)];
-  if (out.bottomVisible) out.bottom = [iso(b.x, b.y, z0), iso(X, b.y, z0), iso(X, Y, z0), iso(b.x, Y, z0)];
-  return out;
-}
-
-/** Floor lines and mullions on a tower's two visible faces. */
-function towerLines(b, iso, s) {
-  var X = b.x + b.dx, Y = b.y + b.dy, z0 = b.z + lift(b), Z = z0 + b.dz;
-  for (var k = 1; k < b.dz; k++) { s.push([iso(X, b.y, z0 + k), iso(X, Y, z0 + k)]); s.push([iso(b.x, Y, z0 + k), iso(X, Y, z0 + k)]); }
-  for (var m = 0.5; m < b.dy; m += 0.5) s.push([iso(X, b.y + m, z0), iso(X, b.y + m, Z)]);
-  for (m = 0.5; m < b.dx; m += 0.5) s.push([iso(b.x + m, Y, z0), iso(b.x + m, Y, Z)]);
-}
-
-/** Railing ticks along the exposed roof edges of a terrace, plus a stair on request. */
-function terraceLines(b, iso, s) {
-  var X = b.x + b.dx, Y = b.y + b.dy, Z = b.z + lift(b) + b.dz, rail = 0.18;
-  for (var t = 0; t <= b.dy; t += 0.3) s.push([iso(X, b.y + t, Z), iso(X, b.y + t, Z + rail)]);
-  for (t = 0; t <= b.dx; t += 0.3) s.push([iso(b.x + t, Y, Z), iso(b.x + t, Y, Z + rail)]);
-  s.push([iso(X, b.y, Z + rail), iso(X, Y, Z + rail)]); s.push([iso(b.x, Y, Z + rail), iso(X, Y, Z + rail)]);
-  if (b.stair) for (var k = 0; k < 5; k++) s.push([iso(b.x + 0.2, b.y + 0.2 + k * 0.15, Z), iso(b.x + 0.8, b.y + 0.2 + k * 0.15, Z)]);
-}
-
-/** Windows on both visible faces on a floor grid: one small rectangle per floor per half unit. */
-function openings(b, iso, s, glows, r) {
-  var X = b.x + b.dx, Y = b.y + b.dy, z0 = b.z + lift(b);
-  for (var k = 0; k < b.dz; k++) {
-    for (var m = 0; m < b.dy; m += 0.5) { var p = [iso(X, b.y + m + 0.12, z0 + k + 0.3), iso(X, b.y + m + 0.38, z0 + k + 0.3), iso(X, b.y + m + 0.38, z0 + k + 0.75), iso(X, b.y + m + 0.12, z0 + k + 0.75)]; quad(p, s); glows.push({ poly: p, k: r() }); }
-    for (m = 0; m < b.dx; m += 0.5) { p = [iso(b.x + m + 0.12, Y, z0 + k + 0.3), iso(b.x + m + 0.38, Y, z0 + k + 0.3), iso(b.x + m + 0.38, Y, z0 + k + 0.75), iso(b.x + m + 0.12, Y, z0 + k + 0.75)]; quad(p, s); glows.push({ poly: p, k: r() }); }
-  }
-}
-
-/** Push the four edges of a quad as strokes. */
-function quad(p, s) { for (var i = 0; i < 4; i++) s.push([p[i], p[(i + 1) % 4]]); }
-
-/** A gable roof on a box: ridge along x, two slopes, the +x face becomes a pentagon. Returns fills. */
-function gableRoof(b, iso, s) {
-  var X = b.x + b.dx, Y = b.y + b.dy, Z = b.z + lift(b) + b.dz, ym = b.y + b.dy / 2, h = b.dy * 0.45;
-  var back = [iso(b.x, b.y, Z), iso(X, b.y, Z), iso(X, ym, Z + h), iso(b.x, ym, Z + h)];
-  var front = [iso(b.x, Y, Z), iso(X, Y, Z), iso(X, ym, Z + h), iso(b.x, ym, Z + h)];
-  quad(back, s); quad(front, s);
-  s.push([iso(X, b.y, Z), iso(X, ym, Z + h)], [iso(X, ym, Z + h), iso(X, Y, Z)]);
-  return [back, front];
-}
-
-/** Thin columns from the underside of an overhanging box down to the ground or the box below. */
-function columns(b, iso, s) {
-  var z0 = b.z + lift(b), zb = b.support || 0;
-  [[b.x + 0.15, b.y + 0.15], [b.x + b.dx - 0.15, b.y + 0.15], [b.x + 0.15, b.y + b.dy - 0.15], [b.x + b.dx - 0.15, b.y + b.dy - 0.15]].forEach(function (c) {
-    s.push([iso(c[0], c[1], zb), iso(c[0], c[1], z0)]);
-  });
-}
-
-/** Dashed guide line from a lifted box down to where it sits, as short segments. */
-function guides(b, iso, s) {
-  var z0 = b.z + lift(b), corners = [[b.x, b.y], [b.x + b.dx, b.y], [b.x, b.y + b.dy], [b.x + b.dx, b.y + b.dy]];
-  corners.forEach(function (c) { for (var z = b.z; z < z0; z += 0.3) s.push([iso(c[0], c[1], z), iso(c[0], c[1], Math.min(z0, z + 0.15))]); });
-}
-
-/** Decorated box drawing: outlines, tower or terrace detail, gable, openings, columns, and hatching.
-    F.hatchlight gives three weights (top blank, +x single, +y cross); otherwise the +x face is hatched.
-    Returns {fills, glows, strokes}. */
-function boxDrawing2(b, iso, u, F) {
-  F = F || {};
-  var fc = faces(b, iso, F), s = [], glows = [], fills = [fc.fx, fc.fy];
-  if (b.gable && fc.topVisible) fills = fills.concat(gableRoof(b, iso, s));
-  else if (fc.topVisible) { fills.push(fc.top); quad(fc.top, s); }
-  if (fc.bottomVisible) { fills.push(fc.bottom); quad(fc.bottom, s); }
-  quad(fc.fx, s); quad(fc.fy, s);
-  if (b.tower) towerLines(b, iso, s);
-  if (b.terrace && !b.gable && fc.topVisible) terraceLines(b, iso, s);
-  if (b.openings && !b.tower) openings(b, iso, s, glows, F.r || function () { return 1; });
-  if (b.columns) columns(b, iso, s);
-  if (b.lift) guides(b, iso, s);
-  var Px = fc.fx[0], Ux = [fc.fx[3][0] - Px[0], fc.fx[3][1] - Px[1]], Vx = [fc.fx[1][0] - Px[0], fc.fx[1][1] - Px[1]];
-  if (!b.tower && !b.openings) {
-    if (F.hatchlight) {
-      hatchFace(Px, Ux, Vx, 6, s);
-      var Py = fc.fy[0], Uy = [fc.fy[3][0] - Py[0], fc.fy[3][1] - Py[1]], Vy = [fc.fy[1][0] - Py[0], fc.fy[1][1] - Py[1]];
-      hatchFace(Py, Uy, Vy, 5, s); hatchFace(Py, Vy, Uy, 5, s);
-    } else if (F.hatch !== 0) hatchFace(Px, Ux, Vx, F.hatch || 6, s);
-  }
-  return { fills: fills, glows: glows, strokes: s };
-}
-
-/** Stepped terrace stacks: each level steps back at random as it rises. */
-function terraceStacks(r, boxes, baseAt) {
-  var stacks = 2 + Math.floor(r() * 2);
-  for (var s = 0; s < stacks; s++) {
-    var x = Math.floor(r() * 3), y = Math.floor(r() * 3), w = 4 + Math.floor(r() * 3), d = 4 + Math.floor(r() * 3);
-    var z = baseAt(x, y, w, d), levels = 5 + Math.floor(r() * 4);
-    for (var l = 0; l < levels && w >= 1 && d >= 1; l++) {
-      var dz = 1 + Math.floor(r() * 3);
-      boxes.push({ x: x, y: y, z: z, dx: w, dy: d, dz: dz, terrace: true, stair: r() < 0.5 });
-      z += dz;
-      if (r() < 0.55) { x += 1; w -= 1; } if (r() < 0.55) { y += 1; d -= 1; }
-      if (r() < 0.3) { w -= 1; } if (r() < 0.3) { d -= 1; }
-    }
-  }
-}
-
-/** Courtyard footprints: an L or U made of two or three touching boxes of one height. */
-function courtyardBlocks(r, boxes, baseAt, g) {
-  var n = 1 + Math.floor(r() * 2);
-  for (var i = 0; i < n; i++) {
-    var x = Math.floor(r() * (g - 4)), y = Math.floor(r() * (g - 4)), w = 3 + Math.floor(r() * 2), d = 3 + Math.floor(r() * 2), dz = 2 + Math.floor(r() * 3);
-    var z = baseAt(x, y, w, d);
-    boxes.push({ x: x, y: y, z: z, dx: w, dy: 1, dz: dz });
-    boxes.push({ x: x, y: y + 1, z: z, dx: 1, dy: d - 1, dz: dz });
-    if (r() < 0.6) boxes.push({ x: x + w - 1, y: y + 1, z: z, dx: 1, dy: d - 1, dz: dz });
-  }
-}
-
-/** Towers: tall thin volumes placed on top of whatever is already at their cell. */
-function towerBlocks(r, boxes, baseAt, g) {
-  var n = 2 + Math.floor(r() * 3);
-  for (var i = 0; i < n; i++) {
-    var tx = Math.floor(r() * g), ty = Math.floor(r() * g), tdx = 1 + (r() < 0.3 ? 1 : 0), tdy = 1 + (r() < 0.3 ? 1 : 0);
-    boxes.push({ x: tx, y: ty, z: baseAt(tx, ty, tdx, tdy), dx: tdx, dy: tdy, dz: 8 + Math.floor(r() * 9), tower: true });
-  }
-}
-
-/** Cantilevers: some raised boxes grow one unit past their support and get columns underneath. */
-function cantilever(r, boxes) {
-  boxes.forEach(function (b) {
-    if (b.z > 0 && !b.tower && r() < 0.35) { b.dx += 1; b.columns = true; b.support = 0; }
-  });
-}
-
-/** Ground context: plot boundary as dashes, two paths, and a few tree circles outside the boxes. */
-function groundContext(r, boxes, g, iso) {
-  var s = [], m = 1.2;
-  function dash(a, b) { var n = 18; for (var k = 0; k < n; k += 2) { var t0 = k / n, t1 = (k + 1) / n; s.push([iso(a[0] + (b[0] - a[0]) * t0, a[1] + (b[1] - a[1]) * t0, 0), iso(a[0] + (b[0] - a[0]) * t1, a[1] + (b[1] - a[1]) * t1, 0)]); } }
-  dash([-m, -m], [g + m, -m]); dash([g + m, -m], [g + m, g + m]); dash([g + m, g + m], [-m, g + m]); dash([-m, g + m], [-m, -m]);
-  s.push([iso(-m, g * 0.5, 0), iso(g + m, g * 0.5, 0)], [iso(g * 0.5, -m, 0), iso(g * 0.5, g + m, 0)]);
-  for (var i = 0; i < 6; i++) {
-    var cx = -0.6 + r() * (g + 1.2), cy = -0.6 + r() * (g + 1.2), free = true;
-    boxes.forEach(function (b) { if (cx > b.x - 0.4 && cx < b.x + b.dx + 0.4 && cy > b.y - 0.4 && cy < b.y + b.dy + 0.4) free = false; });
-    if (!free) continue;
-    var prev = null;
-    for (var k = 0; k <= 12; k++) { var t = k / 12 * Math.PI * 2, p = iso(cx + 0.35 * Math.cos(t), cy + 0.35 * Math.sin(t), 0); if (prev) s.push([prev, p]); prev = p; }
-  }
-  return s;
-}
-
-/** The massing scene: generated in unit space, measured, and fitted to region R = {x, y, w, h}.
-    opts: see MASSING_OPTIONS. Returns items. */
-function massing3(r, R, opts) {
-  var F = resolve('massing', opts), boxes = [], g = 8;
-  function baseAt(x, y, dx, dy) { var z = 0; boxes.forEach(function (b) { if (x < b.x + b.dx && x + dx > b.x && y < b.y + b.dy && y + dy > b.y) z = Math.max(z, b.z + b.dz); }); return z; }
-  if (F.terraces) terraceStacks(r, boxes, baseAt); else boxes = massing(r, { count: 14, grid: g });
-  if (F.courtyards) courtyardBlocks(r, boxes, baseAt, g);
-  if (F.towers) towerBlocks(r, boxes, baseAt, g);
-  if (F.cantilevers) cantilever(r, boxes);
-  /** True when nothing sits on top of box b. */
-  function isTop(b) { return !boxes.some(function (o) { return o !== b && o.z === b.z + b.dz && o.x < b.x + b.dx && o.x + o.dx > b.x && o.y < b.y + b.dy && o.y + o.dy > b.y; }); }
-  boxes.forEach(function (b) {
-    if (F.gables && !b.tower && isTop(b) && r() < 0.5) b.gable = true;
-    if (F.openings && !b.tower) b.openings = true;
-    if (F.exploded) b.lift = b.z * 0.6 + (b.z > 0 ? 0.6 : 0);
-  });
-  boxes.sort(painterOrder);
-  var deg = F.randomAngle ? 20 + r() * 20 : 30, raw = makeIso(0, 0, 1, deg), cam = null;
-  if (F.perspective === 2 || F.perspective === 3) {
-    var low = F.perspective === 3, Cc = [g + 6 + r() * 8, g + 6 + r() * 8, low ? 1.5 : 6 + r() * 10];
-    cam = pinhole(Cc, [g * 0.45, g * 0.45, Cc[2]], low ? 0.35 + r() * 0.3 : 0);
-    raw = function (x, y, z) { return cam([x, y, z]); };
-  }
-  var x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-  var pad = F.ground ? 1.2 : 0;
-  boxes.concat([{ x: -pad, y: -pad, z: 0, dx: g + 2 * pad, dy: g + 2 * pad, dz: 0 }]).forEach(function (b) {
-    for (var c = 0; c < 8; c++) {
-      var p = raw(b.x + (c & 1 ? b.dx : 0), b.y + (c & 2 ? b.dy : 0), b.z + lift(b) + (c & 4 ? b.dz + (b.gable ? b.dy * 0.45 : 0.3) : 0));
-      x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]);
-    }
-  });
-  var u = Math.min(R.w * 0.92 / (x1 - x0), R.h * 0.88 / (y1 - y0));
-  var ox = R.x + (R.w - (x1 - x0) * u) / 2 - x0 * u, oy = R.y + R.h * 0.94 - y1 * u;
-  var iso = cam ? function (x, y, z) { var p = raw(x, y, z); return [ox + p[0] * u, oy + p[1] * u]; } : makeIso(ox, oy, u, deg), items = [];
-  if (F.ground) items.push({ strokes: groundContext(r, boxes, g, iso) });
-  var flags = { hatchlight: F.hatchlight, r: r, cam: cam };
-  boxes.forEach(function (b) { items.push(boxDrawing2(b, iso, u, flags)); });
-  return items;
-}
-
 /* ---- corner.js ---- */
 /* The street corner: a 3D street seen through a pinhole camera, fitted to a region.
    Every feature is a flag in CORNER_OPTIONS (src/options.js); `perspective` is 2 (level camera)
@@ -1036,12 +860,15 @@ function side(isRight) {
   return { pt: isRight ? function (d, h, e) { return [d, -e, h]; } : function (d, h, e) { return [-e, d, h]; } };
 }
 
-/** Resolve options: apply a named preset, expand the legacy shorthands, then fill defaults. */
-function cornerOptions(opts) {
+/** Resolve options: apply a named preset, expand the legacy shorthands, draw the randomized
+    subset if asked (preset flags count as pinned), then fill defaults. r is the generator, so a
+    randomized choice belongs to the seed. */
+function cornerOptions(r, opts) {
   var merged = {};
   if (opts && opts.preset && PRESETS.corner[opts.preset]) Object.assign(merged, PRESETS.corner[opts.preset]);
   if (opts) for (var k in opts) if (k !== 'preset') merged[k] = opts[k];
   if (opts && opts.pitch) merged.perspective = 3;
+  merged = randomizeOptions('corner', r, merged);
   var o = resolve('corner', merged);
   if (opts && opts.full) { o.backRow = true; o.balconies = true; o.awnings = true; o.setbacks = true; o.closeCamera = true; }
   return o;
@@ -1333,9 +1160,10 @@ function cornerCamera(r, o) {
 }
 
 /** The street corner. r: generator. R: region {x, y, w, h}. opts: any CORNER_OPTIONS flags,
-    `perspective` 2 or 3, `preset`, plus the shorthands pitch and full. Returns items. */
+    `perspective` 2 or 3, `preset`, `randomize` (fraction), plus the shorthands pitch and full.
+    Returns items, with the resolved options on `items.options`. */
 function corner4(r, R, opts) {
-  var o = cornerOptions(opts);
+  var o = cornerOptions(r, opts);
   o.sunRight = r() < 0.5;
   var cam = cornerCamera(r, o);
   var sides = [[side(false), 26 + r() * 20], [side(true), 44 + r() * 30]], items = [], front = [], gates = [[], []];
@@ -1351,11 +1179,397 @@ function corner4(r, R, opts) {
   front.forEach(function (it) { items.push(it); });
   if (o.roundedCorner) { var cr = ink.roundedCorner(r, cam, rc, first, o); items.push(cr); }
   sides.forEach(function (sd, k) { items.push({ strokes: street(r, cam, sd[0], sd[1], o, gates[k]) }); });
-  return fitToRegion(items, cam([0, 0, 0]), R);
+  var out = fitToRegion(items, cam([0, 0, 0]), R);
+  out.options = o;   // the resolved flags in effect, including any randomized draw
+  return out;
 }
 
 /** Friendlier name for the same generator. */
 var streetCorner = corner4;
+
+/* ---- facades.js ---- */
+/* Facades on box faces: the street corner's grammar (window families, ornament, millwork, ink
+   pieces, balconies, awnings, rooftops) drawn on the two visible faces of a massing box, plus the
+   street set along the plot's two street edges. Every helper here maps a face's local facade
+   coordinates (d along the face, h up, e outward) into world units and hands the corner's own
+   drawing functions a projection, so the same code decorates a box and a street building. */
+
+/** Facade units per box unit. One box unit is one floor of three facade units, so window, trim
+    and cornice sizes keep the proportions they have on the street corner. */
+var FACADE_UNITS = 3;
+
+/** The massing flags that ask for facades on box faces. Any one of them on switches every
+    non-tower box from blank hatched faces to a facade drawn with the corner grammar. */
+var FACADE_FLAGS = ['winRect', 'winArch', 'winTall', 'winPaired', 'winGrid', 'brackets', 'quoins', 'keystones', 'rustication',
+  'architraves', 'lintels', 'shutters', 'stringCourses', 'dentils', 'pediments', 'pilasters', 'transoms', 'parapetCaps', 'fireEscapes',
+  'bays', 'deepCornice', 'shadowHatch', 'stoop', 'planters', 'arches', 'balconies', 'awnings', 'rooftops'];
+
+/** True when any facade flag is on in resolved massing options F. */
+function wantsFacades(F) {
+  return FACADE_FLAGS.some(function (k) { return F[k]; });
+}
+
+/** True when any street flag is on in resolved massing options F. */
+function wantsStreet(F) {
+  return !!(F.kerb || F.roadDashes || F.lamps || F.trees || F.fence);
+}
+
+/** Per-box recipe drawn from the flags with a per-box chance, so a cluster varies box to box the
+    way a street varies building to building. Mirrors the corner's buildingRecipe. */
+function boxRecipe(r, F) {
+  return {
+    window: pick(r, windowPool(F)), sunRight: F.sunRight, keystones: F.keystones, shadowHatch: F.shadowHatch, roof: 'flat',
+    balconies: F.balconies && r() < 0.6, awnings: F.awnings && r() < 0.6,
+    brackets: F.brackets && r() < 0.7, quoins: F.quoins && r() < 0.5, rustication: F.rustication && r() < 0.6,
+    architraves: F.architraves && r() < 0.6, lintels: F.lintels && r() < 0.6, shutters: F.shutters && r() < 0.5, pediments: F.pediments && r() < 0.5,
+    stringCourses: F.stringCourses && r() < 0.7, dentils: F.dentils && r() < 0.6, pilasters: F.pilasters && r() < 0.5, transoms: F.transoms && r() < 0.7,
+    parapetCaps: F.parapetCaps && r() < 0.8, fireEscape: F.fireEscapes && r() < 0.4,
+    bays: F.bays && r() < 0.6, deepCornice: F.deepCornice && r() < 0.7, stoop: F.stoop && r() < 0.8,
+    planters: F.planters && r() < 0.7, arches: F.arches && r() < 0.6, rooftops: F.rooftops && r() < 0.7
+  };
+}
+
+/** The face-local side for a box: pt(d, h, e) -> world, with e outward from the face.
+    which is 'x' for the +x face (d runs along y) or 'y' for the +y face (d runs along x). */
+function faceSide(b, which, z0) {
+  var U = FACADE_UNITS, X = b.x + b.dx, Y = b.y + b.dy;
+  if (which === 'x') return { W: b.dy * U, pt: function (d, h, e) { return [X + e / U, b.y + d / U, z0 + h / U]; } };
+  return { W: b.dx * U, pt: function (d, h, e) { return [b.x + d / U, Y + e / U, z0 + h / U]; } };
+}
+
+/** Which bay columns of a face carry a curved bay window, and over which floors. */
+function faceBayColumns(r, o, bays, nF) {
+  var out = {};
+  if (!o.bays || nF < 2) return out;
+  for (var b = 0; b < bays; b++) if (r() < 0.35) { var f0 = r() < 0.5 ? 0 : 1; out[b] = [f0, Math.max(f0 + 1, nF - (r() < 0.5 ? 0 : 1))]; }
+  return out;
+}
+
+/** The facade on one visible face of box b. iso: world to screen. rec: the box's recipe. ground:
+    the box sits on the ground, so its first unit is a ground floor with a door and shopfronts.
+    withDoor: this face gets the door. Returns {strokes, glows, extras, door} where extras are
+    items that project from the face (bays, cornice, stoop, planters) and draw right after the box,
+    and door is the door's d-range on the face in facade units, or null. */
+function faceFacade(r, iso, b, which, rec, ground, withDoor) {
+  var U = FACADE_UNITS, z0 = b.z + (b.lift || 0), S = faceSide(b, which, z0);
+  var cam = function (P) { return iso(P[0], P[1], P[2]); };
+  var gh = ground ? U : 0, nF = b.dz - (ground ? 1 : 0), W = S.W;
+  var o = Object.assign({}, rec, { off: 0, width: W, groundH: gh, floors: nF, floorH: U, h0: 0, door: !!withDoor, bayW: 2.4 + r() * 1.2 });
+  var strokes = [], fills = [], glows = [], g = helper(cam, S, o, strokes, fills, glows, r);
+  var win = windowOf(o.window, g.line, function (a, b2, c, d) { g.rect(a, b2, c, d, 0); });
+  if (gh > 0) g.line(0, gh, W, gh, 0);
+  g.line(0, g.H - 0.3, W, g.H - 0.3, 0);
+  ornament(o, g);
+  if (o.stringCourses) mw.stringCourses(g);
+  if (o.dentils && !o.deepCornice) mw.dentils(g);
+  if (o.parapetCaps) mw.parapetCap(g);
+  if (o.shadowHatch && !o.deepCornice) ink.shadeBand(g, 0, W, g.H - 0.3, 0.5);
+  var bays = Math.max(1, Math.floor(W / o.bayW)), rb = W / bays, door = o.door ? Math.floor(r() * bays) : -1;
+  if (o.pilasters) mw.pilasters(g, bays, rb);
+  var bayCols = faceBayColumns(r, o, bays, nF);
+  floors(r, o, g, bays, rb, win, bayCols);
+  var doorRange = gh > 0 ? groundFloor(r, o, g, bays, rb, door) : null;
+  for (var k in bayCols) g.extras.push(ink.bayWindow(r, g, k * rb + rb * 0.12, (+k + 1) * rb - rb * 0.12, bayCols[k][0], bayCols[k][1], o));
+  if (o.fireEscape) { var fb = Math.floor(r() * bays); mw.fireEscape(g, fb * rb + rb * 0.25, (fb + 1) * rb - rb * 0.25); }
+  if (o.deepCornice) g.extras.push(ink.deepCornice(g, o));
+  if (o.rooftops && which === 'x' && !b.gable && !b.mansard) rooftops(r, g);
+  return { strokes: strokes, glows: glows, extras: g.extras, door: doorRange };
+}
+
+/** The street set along the plot's two street edges (x = g and y = g), each a side like the
+    corner's: kerb, road dashes, lamps, trees, and the fence with gates. gates: [[d0, d1], ...]
+    per side in facade units along that edge. Returns two items. */
+function streetAround(r, iso, g, F, gates) {
+  var U = FACADE_UNITS, cam = function (P) { return iso(P[0], P[1], P[2]); };
+  var sides = [
+    { pt: function (d, h, e) { return [g + e / U, d / U, h / U]; } },
+    { pt: function (d, h, e) { return [d / U, g + e / U, h / U]; } }
+  ];
+  var o = { kerb: F.kerb, roadDashes: F.roadDashes, lamps: F.lamps, trees: F.trees, fence: F.fence };
+  return sides.map(function (S, k) { return { strokes: street(r, cam, S, g * U, o, gates[k] || []) }; });
+}
+
+/** How far the street set reaches past the plot edge, in box units, for fitting. */
+function streetReach(F) {
+  if (F.roadDashes) return 3.2;
+  if (F.trees) return 1.8;
+  if (F.kerb || F.lamps || F.fence) return 1.3;
+  return 0;
+}
+
+/* ---- massing.js ---- */
+/* Axonometric massing: box clusters, decorated box drawings, and the fitted massing scene.
+   Every feature is a flag in MASSING_OPTIONS (src/options.js). */
+
+/** A seeded cluster of stacked boxes on a grid, sorted far to near for painter's order.
+    opts: count, grid. Returns [{x, y, z, dx, dy, dz}]. */
+function massing(r, opts) {
+  var n = opts.count || 14, g = opts.grid || 6, boxes = [], height = {};
+  for (var i = 0; i < n; i++) {
+    var dx = 1 + Math.floor(r() * 3), dy = 1 + Math.floor(r() * 3);
+    var x = Math.floor(r() * (g - dx + 1)), y = Math.floor(r() * (g - dy + 1));
+    var base = 0;
+    for (var ix = x; ix < x + dx; ix++) for (var iy = y; iy < y + dy; iy++) base = Math.max(base, height[ix + ',' + iy] || 0);
+    var dz = 1 + Math.floor(r() * 4);
+    for (ix = x; ix < x + dx; ix++) for (iy = y; iy < y + dy; iy++) height[ix + ',' + iy] = base + dz;
+    boxes.push({ x: x, y: y, z: base, dx: dx, dy: dy, dz: dz });
+  }
+  boxes.sort(painterOrder);
+  return boxes;
+}
+
+/** Painter's order for axis-aligned boxes viewed from +x, +y, +z: by the sum of centre coordinates. */
+function painterOrder(a, b) {
+  return (a.x + a.dx / 2 + a.y + a.dy / 2 + a.z + a.dz / 2) - (b.x + b.dx / 2 + b.y + b.dy / 2 + b.z + b.dz / 2);
+}
+
+/** Hatch a parallelogram face with origin P and edge vectors U, V: lines parallel to V spaced along U. */
+function hatchFace(P, U, V, spacing, out) {
+  var L = Math.hypot(U[0], U[1]);
+  for (var k = spacing; k < L; k += spacing) { var a = [P[0] + U[0] * k / L, P[1] + U[1] * k / L]; out.push([a, [a[0] + V[0], a[1] + V[1]]]); }
+}
+
+/** Visible faces of a box plus hatch lines on the +x face. iso: projection. Returns {fills, strokes}. */
+function boxDrawing(b, iso, hatchSpacing) {
+  return boxDrawing2(b, iso, 1, { hatch: hatchSpacing });
+}
+
+/** The lift applied to a box in an exploded view (zero otherwise). */
+function lift(b) { return b.lift || 0; }
+
+/** The visible face polygons of a box: +x face, +y face, and the top, or the underside when a
+    perspective camera (F.cam) stands below the box, or neither when it stands between. */
+function faces(b, iso, F) {
+  var X = b.x + b.dx, Y = b.y + b.dy, z0 = b.z + lift(b), Z = z0 + b.dz, cz = F && F.cam ? F.cam.C[2] : Infinity;
+  var out = {
+    fx: [iso(X, b.y, z0), iso(X, Y, z0), iso(X, Y, Z), iso(X, b.y, Z)],
+    fy: [iso(b.x, Y, z0), iso(X, Y, z0), iso(X, Y, Z), iso(b.x, Y, Z)],
+    topVisible: cz > Z, bottomVisible: cz < z0
+  };
+  if (out.topVisible) out.top = [iso(b.x, b.y, Z), iso(X, b.y, Z), iso(X, Y, Z), iso(b.x, Y, Z)];
+  if (out.bottomVisible) out.bottom = [iso(b.x, b.y, z0), iso(X, b.y, z0), iso(X, Y, z0), iso(b.x, Y, z0)];
+  return out;
+}
+
+/** Floor lines and mullions on a tower's two visible faces. */
+function towerLines(b, iso, s) {
+  var X = b.x + b.dx, Y = b.y + b.dy, z0 = b.z + lift(b), Z = z0 + b.dz;
+  for (var k = 1; k < b.dz; k++) { s.push([iso(X, b.y, z0 + k), iso(X, Y, z0 + k)]); s.push([iso(b.x, Y, z0 + k), iso(X, Y, z0 + k)]); }
+  for (var m = 0.5; m < b.dy; m += 0.5) s.push([iso(X, b.y + m, z0), iso(X, b.y + m, Z)]);
+  for (m = 0.5; m < b.dx; m += 0.5) s.push([iso(b.x + m, Y, z0), iso(b.x + m, Y, Z)]);
+}
+
+/** Railing ticks along the exposed roof edges of a terrace, plus a stair on request. */
+function terraceLines(b, iso, s) {
+  var X = b.x + b.dx, Y = b.y + b.dy, Z = b.z + lift(b) + b.dz, rail = 0.18;
+  for (var t = 0; t <= b.dy; t += 0.3) s.push([iso(X, b.y + t, Z), iso(X, b.y + t, Z + rail)]);
+  for (t = 0; t <= b.dx; t += 0.3) s.push([iso(b.x + t, Y, Z), iso(b.x + t, Y, Z + rail)]);
+  s.push([iso(X, b.y, Z + rail), iso(X, Y, Z + rail)]); s.push([iso(b.x, Y, Z + rail), iso(X, Y, Z + rail)]);
+  if (b.stair) for (var k = 0; k < 5; k++) s.push([iso(b.x + 0.2, b.y + 0.2 + k * 0.15, Z), iso(b.x + 0.8, b.y + 0.2 + k * 0.15, Z)]);
+}
+
+/** Windows on both visible faces on a floor grid: one small rectangle per floor per half unit. */
+function openings(b, iso, s, glows, r) {
+  var X = b.x + b.dx, Y = b.y + b.dy, z0 = b.z + lift(b);
+  for (var k = 0; k < b.dz; k++) {
+    for (var m = 0; m < b.dy; m += 0.5) { var p = [iso(X, b.y + m + 0.12, z0 + k + 0.3), iso(X, b.y + m + 0.38, z0 + k + 0.3), iso(X, b.y + m + 0.38, z0 + k + 0.75), iso(X, b.y + m + 0.12, z0 + k + 0.75)]; quad(p, s); glows.push({ poly: p, k: r() }); }
+    for (m = 0; m < b.dx; m += 0.5) { p = [iso(b.x + m + 0.12, Y, z0 + k + 0.3), iso(b.x + m + 0.38, Y, z0 + k + 0.3), iso(b.x + m + 0.38, Y, z0 + k + 0.75), iso(b.x + m + 0.12, Y, z0 + k + 0.75)]; quad(p, s); glows.push({ poly: p, k: r() }); }
+  }
+}
+
+/** Push the four edges of a quad as strokes. */
+function quad(p, s) { for (var i = 0; i < 4; i++) s.push([p[i], p[(i + 1) % 4]]); }
+
+/** A gable roof on a box: ridge along x, two slopes, the +x face becomes a pentagon. Returns fills. */
+function gableRoof(b, iso, s) {
+  var X = b.x + b.dx, Y = b.y + b.dy, Z = b.z + lift(b) + b.dz, ym = b.y + b.dy / 2, h = b.dy * 0.45;
+  var back = [iso(b.x, b.y, Z), iso(X, b.y, Z), iso(X, ym, Z + h), iso(b.x, ym, Z + h)];
+  var front = [iso(b.x, Y, Z), iso(X, Y, Z), iso(X, ym, Z + h), iso(b.x, ym, Z + h)];
+  quad(back, s); quad(front, s);
+  s.push([iso(X, b.y, Z), iso(X, ym, Z + h)], [iso(X, ym, Z + h), iso(X, Y, Z)]);
+  return [back, front];
+}
+
+/** A mansard storey on a box: the top ring steps in and rises, the two visible slopes get slate
+    lines, and the flat cap on top. Returns fills for the slopes and the cap. */
+function mansardRoof(b, iso, s) {
+  var X = b.x + b.dx, Y = b.y + b.dy, Z = b.z + lift(b) + b.dz, i = Math.min(0.35, b.dx * 0.3, b.dy * 0.3), h = 0.5;
+  var top = [iso(b.x + i, b.y + i, Z + h), iso(X - i, b.y + i, Z + h), iso(X - i, Y - i, Z + h), iso(b.x + i, Y - i, Z + h)];
+  var sx = [iso(X, b.y, Z), iso(X, Y, Z), iso(X - i, Y - i, Z + h), iso(X - i, b.y + i, Z + h)];
+  var sy = [iso(b.x, Y, Z), iso(X, Y, Z), iso(X - i, Y - i, Z + h), iso(b.x + i, Y - i, Z + h)];
+  quad(sx, s); quad(sy, s); quad(top, s);
+  for (var k = 1; k < 4; k++) {
+    var t = k / 4;
+    s.push([iso(X - i * t, b.y + i * t, Z + h * t), iso(X - i * t, Y - i * t, Z + h * t)]);
+    s.push([iso(b.x + i * t, Y - i * t, Z + h * t), iso(X - i * t, Y - i * t, Z + h * t)]);
+  }
+  return [sx, sy, top];
+}
+
+/** Thin columns from the underside of an overhanging box down to the ground or the box below. */
+function columns(b, iso, s) {
+  var z0 = b.z + lift(b), zb = b.support || 0;
+  [[b.x + 0.15, b.y + 0.15], [b.x + b.dx - 0.15, b.y + 0.15], [b.x + 0.15, b.y + b.dy - 0.15], [b.x + b.dx - 0.15, b.y + b.dy - 0.15]].forEach(function (c) {
+    s.push([iso(c[0], c[1], zb), iso(c[0], c[1], z0)]);
+  });
+}
+
+/** Dashed guide line from a lifted box down to where it sits, as short segments. */
+function guides(b, iso, s) {
+  var z0 = b.z + lift(b), corners = [[b.x, b.y], [b.x + b.dx, b.y], [b.x, b.y + b.dy], [b.x + b.dx, b.y + b.dy]];
+  corners.forEach(function (c) { for (var z = b.z; z < z0; z += 0.3) s.push([iso(c[0], c[1], z), iso(c[0], c[1], Math.min(z0, z + 0.15))]); });
+}
+
+/** Decorated box drawing: outlines, tower or terrace detail, gable or mansard, openings, columns,
+    and hatching. F.hatchlight gives three weights (top blank, +x single, +y cross); otherwise the
+    +x face is hatched. Boxes marked b.facade get no hatching, their faces carry a facade instead.
+    Returns {fills, glows, strokes}. */
+function boxDrawing2(b, iso, u, F) {
+  F = F || {};
+  var fc = faces(b, iso, F), s = [], glows = [], fills = [fc.fx, fc.fy];
+  if (b.gable && fc.topVisible) fills = fills.concat(gableRoof(b, iso, s));
+  else if (b.mansard && fc.topVisible) fills = fills.concat(mansardRoof(b, iso, s));
+  else if (fc.topVisible) { fills.push(fc.top); quad(fc.top, s); }
+  if (fc.bottomVisible) { fills.push(fc.bottom); quad(fc.bottom, s); }
+  quad(fc.fx, s); quad(fc.fy, s);
+  if (b.tower) towerLines(b, iso, s);
+  if (b.terrace && !b.gable && !b.mansard && fc.topVisible) terraceLines(b, iso, s);
+  if (b.openings && !b.tower) openings(b, iso, s, glows, F.r || function () { return 1; });
+  if (b.columns) columns(b, iso, s);
+  if (b.lift) guides(b, iso, s);
+  var Px = fc.fx[0], Ux = [fc.fx[3][0] - Px[0], fc.fx[3][1] - Px[1]], Vx = [fc.fx[1][0] - Px[0], fc.fx[1][1] - Px[1]];
+  if (!b.tower && !b.openings && !b.facade) {
+    if (F.hatchlight) {
+      hatchFace(Px, Ux, Vx, 6, s);
+      var Py = fc.fy[0], Uy = [fc.fy[3][0] - Py[0], fc.fy[3][1] - Py[1]], Vy = [fc.fy[1][0] - Py[0], fc.fy[1][1] - Py[1]];
+      hatchFace(Py, Uy, Vy, 5, s); hatchFace(Py, Vy, Uy, 5, s);
+    } else if (F.hatch !== 0) hatchFace(Px, Ux, Vx, F.hatch || 6, s);
+  }
+  return { fills: fills, glows: glows, strokes: s };
+}
+
+/** Stepped terrace stacks: each level steps back at random as it rises. */
+function terraceStacks(r, boxes, baseAt) {
+  var stacks = 2 + Math.floor(r() * 2);
+  for (var s = 0; s < stacks; s++) {
+    var x = Math.floor(r() * 3), y = Math.floor(r() * 3), w = 4 + Math.floor(r() * 3), d = 4 + Math.floor(r() * 3);
+    var z = baseAt(x, y, w, d), levels = 5 + Math.floor(r() * 4);
+    for (var l = 0; l < levels && w >= 1 && d >= 1; l++) {
+      var dz = 1 + Math.floor(r() * 3);
+      boxes.push({ x: x, y: y, z: z, dx: w, dy: d, dz: dz, terrace: true, stair: r() < 0.5 });
+      z += dz;
+      if (r() < 0.55) { x += 1; w -= 1; } if (r() < 0.55) { y += 1; d -= 1; }
+      if (r() < 0.3) { w -= 1; } if (r() < 0.3) { d -= 1; }
+    }
+  }
+}
+
+/** Courtyard footprints: an L or U made of two or three touching boxes of one height. */
+function courtyardBlocks(r, boxes, baseAt, g) {
+  var n = 1 + Math.floor(r() * 2);
+  for (var i = 0; i < n; i++) {
+    var x = Math.floor(r() * (g - 4)), y = Math.floor(r() * (g - 4)), w = 3 + Math.floor(r() * 2), d = 3 + Math.floor(r() * 2), dz = 2 + Math.floor(r() * 3);
+    var z = baseAt(x, y, w, d);
+    boxes.push({ x: x, y: y, z: z, dx: w, dy: 1, dz: dz });
+    boxes.push({ x: x, y: y + 1, z: z, dx: 1, dy: d - 1, dz: dz });
+    if (r() < 0.6) boxes.push({ x: x + w - 1, y: y + 1, z: z, dx: 1, dy: d - 1, dz: dz });
+  }
+}
+
+/** Towers: tall thin volumes placed on top of whatever is already at their cell. */
+function towerBlocks(r, boxes, baseAt, g) {
+  var n = 2 + Math.floor(r() * 3);
+  for (var i = 0; i < n; i++) {
+    var tx = Math.floor(r() * g), ty = Math.floor(r() * g), tdx = 1 + (r() < 0.3 ? 1 : 0), tdy = 1 + (r() < 0.3 ? 1 : 0);
+    boxes.push({ x: tx, y: ty, z: baseAt(tx, ty, tdx, tdy), dx: tdx, dy: tdy, dz: 8 + Math.floor(r() * 9), tower: true });
+  }
+}
+
+/** Cantilevers: some raised boxes grow one unit past their support and get columns underneath. */
+function cantilever(r, boxes) {
+  boxes.forEach(function (b) {
+    if (b.z > 0 && !b.tower && r() < 0.35) { b.dx += 1; b.columns = true; b.support = 0; }
+  });
+}
+
+/** Ground context: plot boundary as dashes, two paths, and a few tree circles outside the boxes. */
+function groundContext(r, boxes, g, iso) {
+  var s = [], m = 1.2;
+  function dash(a, b) { var n = 18; for (var k = 0; k < n; k += 2) { var t0 = k / n, t1 = (k + 1) / n; s.push([iso(a[0] + (b[0] - a[0]) * t0, a[1] + (b[1] - a[1]) * t0, 0), iso(a[0] + (b[0] - a[0]) * t1, a[1] + (b[1] - a[1]) * t1, 0)]); } }
+  dash([-m, -m], [g + m, -m]); dash([g + m, -m], [g + m, g + m]); dash([g + m, g + m], [-m, g + m]); dash([-m, g + m], [-m, -m]);
+  s.push([iso(-m, g * 0.5, 0), iso(g + m, g * 0.5, 0)], [iso(g * 0.5, -m, 0), iso(g * 0.5, g + m, 0)]);
+  for (var i = 0; i < 6; i++) {
+    var cx = -0.6 + r() * (g + 1.2), cy = -0.6 + r() * (g + 1.2), free = true;
+    boxes.forEach(function (b) { if (cx > b.x - 0.4 && cx < b.x + b.dx + 0.4 && cy > b.y - 0.4 && cy < b.y + b.dy + 0.4) free = false; });
+    if (!free) continue;
+    var prev = null;
+    for (var k = 0; k <= 12; k++) { var t = k / 12 * Math.PI * 2, p = iso(cx + 0.35 * Math.cos(t), cy + 0.35 * Math.sin(t), 0); if (prev) s.push([prev, p]); prev = p; }
+  }
+  return s;
+}
+
+/** The massing scene: generated in unit space, measured, and fitted to region R = {x, y, w, h}.
+    opts: see MASSING_OPTIONS, plus `perspective` and `randomize`. Any facade flag on gives every
+    non-tower box a facade on its two visible faces; street flags add the street set along the
+    plot's two street edges. Returns items, with the resolved options on `items.options`. */
+function massing3(r, R, opts) {
+  opts = randomizeOptions('massing', r, opts || {});
+  var F = resolve('massing', opts), boxes = [], g = 8, facades = wantsFacades(F), streets = wantsStreet(F);
+  F.sunRight = r() < 0.5;
+  function baseAt(x, y, dx, dy) { var z = 0; boxes.forEach(function (b) { if (x < b.x + b.dx && x + dx > b.x && y < b.y + b.dy && y + dy > b.y) z = Math.max(z, b.z + b.dz); }); return z; }
+  if (F.terraces) terraceStacks(r, boxes, baseAt); else boxes = massing(r, { count: 14, grid: g });
+  if (F.courtyards) courtyardBlocks(r, boxes, baseAt, g);
+  if (F.towers) towerBlocks(r, boxes, baseAt, g);
+  if (F.cantilevers) cantilever(r, boxes);
+  /** True when nothing sits on top of box b. */
+  function isTop(b) { return !boxes.some(function (o) { return o !== b && o.z === b.z + b.dz && o.x < b.x + b.dx && o.x + o.dx > b.x && o.y < b.y + b.dy && o.y + o.dy > b.y; }); }
+  boxes.forEach(function (b) {
+    if (F.gables && !b.tower && isTop(b) && r() < 0.5) b.gable = true;
+    else if (F.mansards && !b.tower && isTop(b) && r() < 0.5) b.mansard = true;
+    if (F.openings && !b.tower && !facades) b.openings = true;
+    if (facades && !b.tower) b.facade = true;
+    if (F.exploded) b.lift = b.z * 0.6 + (b.z > 0 ? 0.6 : 0);
+  });
+  boxes.sort(painterOrder);
+  var deg = F.randomAngle ? 20 + r() * 20 : 30, raw = makeIso(0, 0, 1, deg), cam = null;
+  if (F.perspective === 2 || F.perspective === 3) {
+    var low = F.perspective === 3, Cc = [g + 6 + r() * 8, g + 6 + r() * 8, low ? 1.5 : 6 + r() * 10];
+    cam = pinhole(Cc, [g * 0.45, g * 0.45, Cc[2]], low ? 0.35 + r() * 0.3 : 0);
+    raw = function (x, y, z) { return cam([x, y, z]); };
+  }
+  var x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  var pad = F.ground ? 1.2 : 0, reach = streets ? streetReach(F) : 0;
+  var extents = [{ x: -pad, y: -pad, z: 0, dx: g + 2 * pad, dy: g + 2 * pad, dz: 0 }];
+  if (reach) extents.push({ x: 0, y: 0, z: 0, dx: g + reach, dy: g + reach, dz: 0 });
+  boxes.concat(extents).forEach(function (b) {
+    for (var c = 0; c < 8; c++) {
+      var p = raw(b.x + (c & 1 ? b.dx : 0), b.y + (c & 2 ? b.dy : 0), b.z + lift(b) + (c & 4 ? b.dz + (b.gable ? b.dy * 0.45 : 0.3) : 0));
+      x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]);
+    }
+  });
+  var u = Math.min(R.w * 0.92 / (x1 - x0), R.h * 0.88 / (y1 - y0));
+  var ox = R.x + (R.w - (x1 - x0) * u) / 2 - x0 * u, oy = R.y + R.h * 0.94 - y1 * u;
+  var iso = cam ? function (x, y, z) { var p = raw(x, y, z); return [ox + p[0] * u, oy + p[1] * u]; } : makeIso(ox, oy, u, deg), items = [];
+  if (F.ground) items.push({ strokes: groundContext(r, boxes, g, iso) });
+  var flags = { hatchlight: F.hatchlight, r: r, cam: cam }, gates = [[], []];
+  boxes.forEach(function (b) {
+    var item = boxDrawing2(b, iso, u, flags);
+    items.push(item);
+    if (!b.facade) return;
+    var ground = b.z === 0 && !b.lift, rec = boxRecipe(r, F);
+    ['x', 'y'].forEach(function (which) {
+      var atEdge = which === 'x' ? b.x + b.dx === g : b.y + b.dy === g;
+      var fd = faceFacade(r, iso, b, which, rec, ground, ground && (atEdge || which === 'x'));
+      item.strokes = item.strokes.concat(fd.strokes);
+      item.glows = (item.glows || []).concat(fd.glows);
+      fd.extras.forEach(function (ex) { items.push({ fills: ex.fills, glows: ex.glows, strokes: ex.strokes }); });
+      if (fd.door && atEdge) { var along = (which === 'x' ? b.y : b.x) * FACADE_UNITS; gates[which === 'x' ? 0 : 1].push([along + fd.door[0], along + fd.door[1]]); }
+    });
+  });
+  if (streets) streetAround(r, iso, g, F, gates).forEach(function (it) { items.push(it); });
+  items.options = F;
+  return items;
+}
 
 /* ---- skyline.js ---- */
 /* The skyline: a 3D city block of towers rendered through the pinhole camera. Lots on a grid (or
@@ -1511,6 +1725,7 @@ function skylineCamera(r, P, F) {
 
 /** The skyline. r: generator. R: region. opts: see SKYLINE_OPTIONS and `perspective`. Returns items. */
 function skyline(r, R, opts) {
+  opts = randomizeOptions('skyline', r, opts || {});
   var F = resolve('skyline', opts), P = F.perspective, cam = skylineCamera(r, P, F), lots = layout(r, F, P);
   var boxes = [], crowns = [], C = cam.C;
   lots.forEach(function (lot) {
@@ -1527,7 +1742,9 @@ function skyline(r, R, opts) {
   if (F.street) items.push({ strokes: streets(r, cam, lots, P, F) });
   boxes.forEach(function (b, i) { items.push(boxItem(r, cam, b, F, i >= boxes.length - nearCount)); });
   items.push({ strokes: crownStrokes });
-  return fitSimilarity(items, R, { x: 0.02, top: 0.06, bottom: 0.08 });
+  var out = fitSimilarity(items, R, { x: 0.02, top: 0.06, bottom: 0.08 });
+  out.options = F;
+  return out;
 }
 
 /* ---- plan.js ---- */
@@ -1604,6 +1821,7 @@ function stair(rooms) {
 
 /** The floor plan. r: generator. R: region. opts: see PLAN_OPTIONS. Returns items. */
 function plan(r, R, opts) {
+  opts = randomizeOptions('plan', r, opts || {});
   var F = resolve('plan', opts), items = [], x0 = R.x + R.w * 0.06, y0 = R.y + R.h * 0.1, W = R.w * 0.88, H = R.h * 0.78, t = 6, T = 10;
   var rooms = [], parts = [];
   subdivide(r, x0, y0, W, H, 5, rooms, parts);
@@ -1613,6 +1831,7 @@ function plan(r, R, opts) {
   if (F.windows) items.push({ strokes: windows(rooms, x0, y0, W, H, T) });
   parts.forEach(function (p) { items.push({ strokes: partition(r, p, t, !!F.doors) }); });
   if (F.stair) items.push({ strokes: stair(rooms) });
+  items.options = F;
   return items;
 }
 
@@ -1638,8 +1857,11 @@ var TAGS = { corner: 'dmg-street-corner', massing: 'dmg-massing', skyline: 'dmg-
 /** True when a kind has a perspective param. */
 function hasPerspective(kind) { return (PARAMS[kind] || []).some(function (p) { return p.name === 'perspective'; }); }
 
-/** Parse the options attribute (JSON) plus the perspective, preset, pitch and full attributes. */
-function readOptions(el, kind) {
+/** The options an element declares, sparse: the `options` JSON, a preset's flags, and the
+    perspective, pitch, full and randomize attributes. Only these keys reach the generator, so a
+    randomized draw can tell a declared flag (pinned) from an unmentioned one (eligible). Takes
+    any object with getAttribute and hasAttribute, so it can be tested without a DOM. */
+function declaredOptions(el, kind) {
   var raw = el.getAttribute('options'), parsed = {};
   if (raw) { try { parsed = JSON.parse(raw) || {}; } catch (e) { parsed = {}; } }
   if (kind === 'corner') {
@@ -1649,7 +1871,14 @@ function readOptions(el, kind) {
     if (el.hasAttribute('full')) { parsed.backRow = true; parsed.balconies = true; parsed.awnings = true; parsed.setbacks = true; parsed.closeCamera = true; }
   }
   if (hasPerspective(kind) && el.getAttribute('perspective') !== null && el.getAttribute('perspective') !== '') parsed.perspective = Number(el.getAttribute('perspective'));
-  return resolve(kind, parsed);
+  var rnd = Number(el.getAttribute('randomize'));
+  if (rnd > 0) parsed.randomize = Math.min(1, rnd);
+  return parsed;
+}
+
+/** The declared options with defaults filled in and params validated. */
+function readOptions(el, kind) {
+  return resolve(kind, declaredOptions(el, kind));
 }
 
 /** Read the element's attributes into a plain object with defaults, night mode applied. Kinds
@@ -1666,7 +1895,8 @@ function readAttrs(el, kind) {
     glow: canGlow ? (glow != null && glow !== '' ? glow : (night ? NIGHT.glow : null)) : null,
     glowProb: base.glowProb,
     night: night,
-    options: readOptions(el, kind)
+    options: readOptions(el, kind),
+    declared: declaredOptions(el, kind)
   };
 }
 
@@ -1688,6 +1918,7 @@ function snippetFor(el, kind) {
   if (kind === 'corner' && el.getAttribute('preset')) parts.push('preset="' + el.getAttribute('preset') + '"');
   var diff = diffFromDefaults(kind, a.options);
   if (hasPerspective(kind) && diff.perspective !== undefined) { parts.push('perspective="' + diff.perspective + '"'); delete diff.perspective; }
+  if (Number(el.getAttribute('randomize')) > 0) parts.push('randomize="' + Math.min(1, Number(el.getAttribute('randomize'))) + '"');
   if (a.night) parts.push('night');
   if (el.getAttribute('color')) parts.push('color="' + el.getAttribute('color') + '"');
   if (el.getAttribute('page')) parts.push('page="' + el.getAttribute('page') + '"');
@@ -1702,12 +1933,16 @@ function snippetFor(el, kind) {
 /** Build the element class for one generator kind. Defined lazily so the module loads without a DOM. */
 function makeClass(kind) {
   return class extends HTMLElement {
-    static get observedAttributes() { return ['seed', 'reseed', 'mode', 'pitch', 'full', 'color', 'page', 'glow', 'night', 'options', 'perspective', 'preset']; }
+    static get observedAttributes() { return ['seed', 'reseed', 'mode', 'pitch', 'full', 'color', 'page', 'glow', 'night', 'options', 'perspective', 'preset', 'randomize']; }
 
     constructor() {
       super();
-      this._stop = null; this._seed = null; this._canvas = null; this._ro = null;
+      this._stop = null; this._seed = null; this._canvas = null; this._ro = null; this._resolved = null;
     }
+
+    /** The flags actually in effect for the drawing on the canvas: the declared options with any
+        randomized draw applied. Null before the first draw. */
+    get resolvedOptions() { return this._resolved; }
 
     /** The seed of the drawing currently shown. Setting it redraws with that seed. */
     get seed() { return this._seed; }
@@ -1740,12 +1975,14 @@ function makeClass(kind) {
     /** Draw a new sibling from a fresh clock seed, regardless of the seed attribute. */
     regenerate() { this._start(clockSeed(kind)); }
 
-    /** One drawing at the given seed (or the attribute, or the clock), with its plotting speeds. */
+    /** One drawing at the given seed (or the attribute, or the clock), with its plotting speeds.
+        Fires the `seed` event after generating, with the seed and the resolved options. */
     _fresh(region, attrs, forced) {
       var seed = forced != null ? forced : (attrs.seed != null ? attrs.seed : clockSeed(kind));
       this._seed = seed;
-      this.dispatchEvent(new CustomEvent('seed', { detail: { seed: seed } }));
-      var items = GENERATORS[kind](rng(seed), region, attrs.options), sp = speedsFor(items, 7, 4);
+      var items = GENERATORS[kind](rng(seed), region, attrs.declared), sp = speedsFor(items, 7, 4);
+      this._resolved = items.options || attrs.options;
+      this.dispatchEvent(new CustomEvent('seed', { detail: { seed: seed, options: this._resolved } }));
       return { items: items, pxPerSecond: sp.pxPerSecond, pxPerSecondOut: sp.pxPerSecondOut };
     }
 
@@ -1769,7 +2006,7 @@ function defineComponents() {
   return true;
 }
 
-var ProceduralLines = { rng, hashSeed, clockSeed, pick, makeIso, facadePoint, pinhole, facesCamera, fitSimilarity, windowOf, facade, facade2, gapElement, OPTIONS, CORNER_OPTIONS, MASSING_OPTIONS, SKYLINE_OPTIONS, PLAN_OPTIONS, PARAMS, PRESETS, GLOW_KINDS, defaults, resolve, diffFromDefaults, wfc, massing, painterOrder, hatchFace, boxDrawing, boxDrawing2, massing3, corner4, streetCorner, skyline, plan, renderTo, totalLength, speedsFor, drawIn, bounce, reducedMotion, defineComponents, snippetFor, TAGS, NIGHT };
+var ProceduralLines = { rng, hashSeed, clockSeed, pick, makeIso, facadePoint, pinhole, facesCamera, fitSimilarity, windowOf, facade, facade2, gapElement, OPTIONS, CORNER_OPTIONS, MASSING_OPTIONS, SKYLINE_OPTIONS, PLAN_OPTIONS, PARAMS, PRESETS, GLOW_KINDS, defaults, resolve, diffFromDefaults, randomizeOptions, wfc, faceFacade, massing, painterOrder, hatchFace, boxDrawing, boxDrawing2, massing3, corner4, streetCorner, skyline, plan, renderTo, totalLength, speedsFor, drawIn, bounce, reducedMotion, defineComponents, snippetFor, declaredOptions, TAGS, NIGHT };
 if (typeof module === 'object' && module.exports) module.exports = ProceduralLines;
 if (global) global.ProceduralLines = ProceduralLines;
 defineComponents();

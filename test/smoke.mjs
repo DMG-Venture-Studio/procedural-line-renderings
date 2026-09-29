@@ -12,8 +12,9 @@ import { plan } from '../src/plan.js';
 import { wfc } from '../src/wfc.js';
 import { facade } from '../src/grammar.js';
 import { facadePoint, fitSimilarity } from '../src/camera.js';
-import { OPTIONS, PARAMS, PRESETS, GLOW_KINDS, defaults, resolve } from '../src/options.js';
+import { OPTIONS, PARAMS, PRESETS, GLOW_KINDS, defaults, resolve, randomizeOptions } from '../src/options.js';
 import { renderTo, totalLength, bounce, drawIn } from '../src/render.js';
+import { declaredOptions } from '../src/components.js';
 
 const region = { x: 0, y: 0, w: 680, h: 700 };
 const wide = { x: 0, y: 0, w: 1440, h: 720 };
@@ -183,6 +184,73 @@ frames.length = 0;
 bounce(ctx, items, {});
 assert.equal(frames.length, 0, 'bounce animated under reduced motion');
 checks += 2;
+
+// 13. Randomize: coverage lands in [fraction, 1] of the eligible pool, pinned flags stay pinned,
+//     camera flags never move, the same seed gives the same subset, and zero means untouched.
+for (const kind of Object.keys(GEN)) {
+  const cameraFlags = OPTIONS[kind].filter(f => f.family === 'camera').map(f => f.name);
+  const pinName = OPTIONS[kind].find(f => f.family !== 'camera').name;
+  const d = defaults(kind);
+  for (const frac of [0.5, 0.9]) {
+    for (const seed of SEEDS) {
+      const opts = { randomize: frac, [pinName]: !d[pinName] };
+      const items = GEN[kind](rng(seed), region, opts), o = items.options;
+      assert.ok(o && typeof o === 'object', `${kind}: no resolved options on the drawing`);
+      const pool = OPTIONS[kind].filter(f => f.family !== 'camera' && f.name !== pinName).map(f => f.name);
+      const on = pool.filter(n => o[n] === true).length, cov = on / pool.length;
+      assert.ok(cov >= frac - 1 / pool.length - 1e-9 && cov <= 1, `${kind}@${seed} randomize ${frac}: coverage ${cov.toFixed(2)} outside [${frac}, 1]`);
+      assert.equal(o[pinName], !d[pinName], `${kind}@${seed}: pinned flag ${pinName} was randomized`);
+      for (const c of cameraFlags) assert.equal(o[c], d[c], `${kind}@${seed}: camera flag ${c} was randomized`);
+      assert.equal('randomize' in o, false, `${kind}: randomize key leaked into resolved options`);
+      inspect(`${kind} randomize`, items);
+      assert.deepEqual(GEN[kind](rng(seed), region, opts).options, o, `${kind}@${seed}: randomize is not reproducible`);
+    }
+  }
+  assert.deepEqual(GEN[kind](rng(3), region, { randomize: 0 }), GEN[kind](rng(3), region, {}), `${kind}: randomize 0 changed the drawing`);
+  const subsets = new Set(SEEDS.map(seed => JSON.stringify(GEN[kind](rng(seed), region, { randomize: 0.5 }).options)));
+  if (OPTIONS[kind].length > 6) assert.ok(subsets.size > 1, `${kind}: randomize picks the same subset for every seed`);
+  checks += 3;
+}
+{
+  const r = rng(1), o = randomizeOptions('corner', r, { randomize: 1 });
+  const pool = OPTIONS.corner.filter(f => f.family !== 'camera');
+  assert.ok(pool.every(f => o[f.name] === true), 'randomize 1 did not turn every eligible flag on');
+  checks++;
+}
+console.log('randomize: coverage, pinning, camera exclusion, determinism hold for every kind');
+
+// 15. The element passes only declared options to the generator, so randomize has a pool to draw
+//     from: a stub element with randomize and one flag yields a sparse object, and running the
+//     generator on it randomizes the rest.
+{
+  const stub = attrs => ({ getAttribute: k => (k in attrs ? attrs[k] : null), hasAttribute: k => k in attrs });
+  const d = declaredOptions(stub({ options: '{"trees":false}', randomize: '0.5', perspective: '3' }), 'corner');
+  assert.deepEqual(d, { trees: false, randomize: 0.5, perspective: 3 }, 'declared options are not sparse');
+  const o = corner4(rng(21), region, d).options, pool = OPTIONS.corner.filter(f => f.family !== 'camera' && f.name !== 'trees');
+  const on = pool.filter(f => o[f.name] === true).length;
+  assert.ok(on / pool.length >= 0.5 - 1 / pool.length, `element path did not randomize: ${on} of ${pool.length} on`);
+  assert.equal(o.trees, false, 'element path did not pin the declared flag');
+  assert.equal(o.perspective, 3, 'element path lost the perspective');
+  const ink = declaredOptions(stub({ preset: 'ink', randomize: '0.6' }), 'corner');
+  assert.equal(ink.bays, true, 'preset flags are not declared');
+  assert.equal(ink.randomize, 0.6, 'randomize lost with a preset');
+  assert.deepEqual(declaredOptions(stub({}), 'massing'), {}, 'an empty element declares options');
+  checks += 3;
+}
+
+// 14. Massing facades: window families replace plain openings, extras project, doors give the
+//     fence its gates, and a mansard box carries its slope fills.
+{
+  const plain = massing3(rng(4), region, { openings: true }), fac = massing3(rng(4), region, { winArch: true, keystones: true });
+  assert.ok(inspect('massing facades', fac).glows > 20, 'facade windows emit no glow polygons');
+  assert.notDeepEqual(plain, fac, 'window families draw the same as plain openings');
+  const facadeOnly = massing3(rng(4), region, { winRect: true, stoop: true });
+  const withStreet = massing3(rng(4), region, { winRect: true, stoop: true, fence: true, kerb: true, lamps: true, trees: true, roadDashes: true });
+  assert.ok(inspect('massing street', withStreet).strokes > inspect('massing facade only', facadeOnly).strokes + 40, 'street set added nothing');
+  const mans = massing3(rng(4), region, { mansards: true, terraces: false, towers: false }), none = massing3(rng(4), region, { terraces: false, towers: false });
+  assert.ok(inspect('mansards', mans).fills > inspect('no roofs', none).fills, 'mansards added no slope fills');
+  checks += 3;
+}
 
 // 12. The dist build evaluates, exposes the same API, and draws the same geometry.
 const dist = readFileSync(new URL('../dist/procedural-line-renderings.js', import.meta.url), 'utf8');
