@@ -1,14 +1,14 @@
-/* Web Components: <dmg-street-corner>, <dmg-massing>, <dmg-skyline>, <dmg-truss>, <dmg-plan>.
+/* Web Components: <dmg-street-corner>, <dmg-massing>, <dmg-skyline>, <dmg-plan>.
    Each element owns a canvas sized to its own box at device pixel ratio and draws the chosen
    generator into it. The page decides placement and size through CSS. Feature flags arrive as
-   JSON in the `options` attribute and are validated against src/options.js. */
+   JSON in the `options` attribute; `perspective` and `preset` are attributes of their own. All are
+   validated against src/options.js. */
 import { rng, clockSeed } from './random.js';
 import { corner4 } from './corner.js';
 import { massing3 } from './massing.js';
 import { skyline } from './skyline.js';
-import { truss } from './truss.js';
 import { plan } from './plan.js';
-import { resolve, diffFromDefaults } from './options.js';
+import { resolve, diffFromDefaults, PARAMS, PRESETS, GLOW_KINDS } from './options.js';
 import { bounce, drawIn, speedsFor } from './render.js';
 
 var STYLE = ':host{display:block;position:relative;min-height:240px}canvas{position:absolute;inset:0;width:100%;height:100%;display:block}';
@@ -18,33 +18,40 @@ export var NIGHT = { page: '#0E0E10', color: '#A8AAB0', glow: '#F2D08A', glowPro
 var DAY = { page: '#FFFFFF', color: '#C4C6CB', glowProb: 0.35 };
 
 /** Generators by element kind. Each takes (r, region, options) and returns items. */
-var GENERATORS = { corner: corner4, massing: massing3, skyline: skyline, truss: truss, plan: plan };
+var GENERATORS = { corner: corner4, massing: massing3, skyline: skyline, plan: plan };
 
 /** Tag names by kind. */
-export var TAGS = { corner: 'dmg-street-corner', massing: 'dmg-massing', skyline: 'dmg-skyline', truss: 'dmg-truss', plan: 'dmg-plan' };
+export var TAGS = { corner: 'dmg-street-corner', massing: 'dmg-massing', skyline: 'dmg-skyline', plan: 'dmg-plan' };
 
-/** Parse the options attribute (JSON) plus the boolean shorthands pitch and full into flags. */
+/** True when a kind has a perspective param. */
+function hasPerspective(kind) { return (PARAMS[kind] || []).some(function (p) { return p.name === 'perspective'; }); }
+
+/** Parse the options attribute (JSON) plus the perspective, preset, pitch and full attributes. */
 function readOptions(el, kind) {
   var raw = el.getAttribute('options'), parsed = {};
   if (raw) { try { parsed = JSON.parse(raw) || {}; } catch (e) { parsed = {}; } }
   if (kind === 'corner') {
-    if (el.hasAttribute('pitch')) parsed.pitch = true;
+    var preset = el.getAttribute('preset');
+    if (preset && PRESETS.corner[preset]) parsed = Object.assign({}, PRESETS.corner[preset], parsed);
+    if (el.hasAttribute('pitch')) parsed.perspective = 3;
     if (el.hasAttribute('full')) { parsed.backRow = true; parsed.balconies = true; parsed.awnings = true; parsed.setbacks = true; parsed.closeCamera = true; }
   }
+  if (hasPerspective(kind) && el.getAttribute('perspective') !== null && el.getAttribute('perspective') !== '') parsed.perspective = Number(el.getAttribute('perspective'));
   return resolve(kind, parsed);
 }
 
-/** Read the element's attributes into a plain object with defaults, night mode applied. */
+/** Read the element's attributes into a plain object with defaults, night mode applied. Kinds
+    without windows never glow. */
 function readAttrs(el, kind) {
   var seed = el.getAttribute('seed'), night = el.hasAttribute('night'), base = night ? NIGHT : DAY;
-  var glow = el.getAttribute('glow');
+  var glow = el.getAttribute('glow'), canGlow = !!GLOW_KINDS[kind];
   return {
     seed: seed === null || seed === '' ? null : Number(seed) >>> 0,
     reseed: el.getAttribute('reseed') || 'cycle',
     mode: el.getAttribute('mode') || 'bounce',
     color: el.getAttribute('color') || base.color,
     page: el.getAttribute('page') || base.page,
-    glow: glow != null && glow !== '' ? glow : (night ? NIGHT.glow : null),
+    glow: canGlow ? (glow != null && glow !== '' ? glow : (night ? NIGHT.glow : null)) : null,
     glowProb: base.glowProb,
     night: night,
     options: readOptions(el, kind)
@@ -66,11 +73,14 @@ export function snippetFor(el, kind) {
   if (a.seed != null) parts.push('seed="' + a.seed + '"');
   if (a.mode !== 'bounce') parts.push('mode="' + a.mode + '"');
   if (a.reseed !== 'cycle') parts.push('reseed="' + a.reseed + '"');
+  if (kind === 'corner' && el.getAttribute('preset')) parts.push('preset="' + el.getAttribute('preset') + '"');
+  var diff = diffFromDefaults(kind, a.options);
+  if (hasPerspective(kind) && diff.perspective !== undefined) { parts.push('perspective="' + diff.perspective + '"'); delete diff.perspective; }
   if (a.night) parts.push('night');
   if (el.getAttribute('color')) parts.push('color="' + el.getAttribute('color') + '"');
   if (el.getAttribute('page')) parts.push('page="' + el.getAttribute('page') + '"');
-  if (el.getAttribute('glow')) parts.push('glow="' + el.getAttribute('glow') + '"');
-  var diff = diffFromDefaults(kind, a.options);
+  if (el.getAttribute('glow') && GLOW_KINDS[kind]) parts.push('glow="' + el.getAttribute('glow') + '"');
+  if (kind === 'corner' && el.getAttribute('preset')) { var base = PRESETS.corner[el.getAttribute('preset')] || {}; for (var k in base) if (diff[k] === base[k]) delete diff[k]; }
   if (Object.keys(diff).length) parts.push("options='" + JSON.stringify(diff) + "'");
   var style = el.getAttribute('style');
   if (style) parts.push('style="' + style + '"');
@@ -80,7 +90,7 @@ export function snippetFor(el, kind) {
 /** Build the element class for one generator kind. Defined lazily so the module loads without a DOM. */
 function makeClass(kind) {
   return class extends HTMLElement {
-    static get observedAttributes() { return ['seed', 'reseed', 'mode', 'pitch', 'full', 'color', 'page', 'glow', 'night', 'options']; }
+    static get observedAttributes() { return ['seed', 'reseed', 'mode', 'pitch', 'full', 'color', 'page', 'glow', 'night', 'options', 'perspective', 'preset']; }
 
     constructor() {
       super();
@@ -91,7 +101,7 @@ function makeClass(kind) {
     get seed() { return this._seed; }
     set seed(v) { this.setAttribute('seed', String(v >>> 0)); }
 
-    /** The resolved feature flags in effect. */
+    /** The resolved feature flags and params in effect. */
     get options() { return readOptions(this, kind); }
 
     /** The HTML that reproduces this element's current state. */

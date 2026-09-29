@@ -1,6 +1,6 @@
 /* Axonometric massing: box clusters, decorated box drawings, and the fitted massing scene.
    Every feature is a flag in MASSING_OPTIONS (src/options.js). */
-import { makeIso } from './camera.js';
+import { makeIso, pinhole } from './camera.js';
 import { resolve } from './options.js';
 
 /** A seeded cluster of stacked boxes on a grid, sorted far to near for painter's order.
@@ -39,14 +39,18 @@ export function boxDrawing(b, iso, hatchSpacing) {
 /** The lift applied to a box in an exploded view (zero otherwise). */
 function lift(b) { return b.lift || 0; }
 
-/** The three visible face polygons of a box: top, +x face, +y face. */
-function faces(b, iso) {
-  var X = b.x + b.dx, Y = b.y + b.dy, z0 = b.z + lift(b), Z = z0 + b.dz;
-  return {
-    top: [iso(b.x, b.y, Z), iso(X, b.y, Z), iso(X, Y, Z), iso(b.x, Y, Z)],
+/** The visible face polygons of a box: +x face, +y face, and the top, or the underside when a
+    perspective camera (F.cam) stands below the box, or neither when it stands between. */
+function faces(b, iso, F) {
+  var X = b.x + b.dx, Y = b.y + b.dy, z0 = b.z + lift(b), Z = z0 + b.dz, cz = F && F.cam ? F.cam.C[2] : Infinity;
+  var out = {
     fx: [iso(X, b.y, z0), iso(X, Y, z0), iso(X, Y, Z), iso(X, b.y, Z)],
-    fy: [iso(b.x, Y, z0), iso(X, Y, z0), iso(X, Y, Z), iso(b.x, Y, Z)]
+    fy: [iso(b.x, Y, z0), iso(X, Y, z0), iso(X, Y, Z), iso(b.x, Y, Z)],
+    topVisible: cz > Z, bottomVisible: cz < z0
   };
+  if (out.topVisible) out.top = [iso(b.x, b.y, Z), iso(X, b.y, Z), iso(X, Y, Z), iso(b.x, Y, Z)];
+  if (out.bottomVisible) out.bottom = [iso(b.x, b.y, z0), iso(X, b.y, z0), iso(X, Y, z0), iso(b.x, Y, z0)];
+  return out;
 }
 
 /** Floor lines and mullions on a tower's two visible faces. */
@@ -107,12 +111,13 @@ function guides(b, iso, s) {
     Returns {fills, glows, strokes}. */
 export function boxDrawing2(b, iso, u, F) {
   F = F || {};
-  var fc = faces(b, iso), s = [], glows = [], fills = [fc.top, fc.fx, fc.fy];
-  if (b.gable) fills = [fc.fx, fc.fy].concat(gableRoof(b, iso, s));
-  else quad(fc.top, s);
+  var fc = faces(b, iso, F), s = [], glows = [], fills = [fc.fx, fc.fy];
+  if (b.gable && fc.topVisible) fills = fills.concat(gableRoof(b, iso, s));
+  else if (fc.topVisible) { fills.push(fc.top); quad(fc.top, s); }
+  if (fc.bottomVisible) { fills.push(fc.bottom); quad(fc.bottom, s); }
   quad(fc.fx, s); quad(fc.fy, s);
   if (b.tower) towerLines(b, iso, s);
-  if (b.terrace && !b.gable) terraceLines(b, iso, s);
+  if (b.terrace && !b.gable && fc.topVisible) terraceLines(b, iso, s);
   if (b.openings && !b.tower) openings(b, iso, s, glows, F.r || function () { return 1; });
   if (b.columns) columns(b, iso, s);
   if (b.lift) guides(b, iso, s);
@@ -204,7 +209,13 @@ export function massing3(r, R, opts) {
     if (F.exploded) b.lift = b.z * 0.6 + (b.z > 0 ? 0.6 : 0);
   });
   boxes.sort(painterOrder);
-  var deg = F.randomAngle ? 20 + r() * 20 : 30, raw = makeIso(0, 0, 1, deg), x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  var deg = F.randomAngle ? 20 + r() * 20 : 30, raw = makeIso(0, 0, 1, deg), cam = null;
+  if (F.perspective === 2 || F.perspective === 3) {
+    var low = F.perspective === 3, Cc = [g + 6 + r() * 8, g + 6 + r() * 8, low ? 1.5 : 6 + r() * 10];
+    cam = pinhole(Cc, [g * 0.45, g * 0.45, Cc[2]], low ? 0.35 + r() * 0.3 : 0);
+    raw = function (x, y, z) { return cam([x, y, z]); };
+  }
+  var x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
   var pad = F.ground ? 1.2 : 0;
   boxes.concat([{ x: -pad, y: -pad, z: 0, dx: g + 2 * pad, dy: g + 2 * pad, dz: 0 }]).forEach(function (b) {
     for (var c = 0; c < 8; c++) {
@@ -214,9 +225,9 @@ export function massing3(r, R, opts) {
   });
   var u = Math.min(R.w * 0.92 / (x1 - x0), R.h * 0.88 / (y1 - y0));
   var ox = R.x + (R.w - (x1 - x0) * u) / 2 - x0 * u, oy = R.y + R.h * 0.94 - y1 * u;
-  var iso = makeIso(ox, oy, u, deg), items = [];
+  var iso = cam ? function (x, y, z) { var p = raw(x, y, z); return [ox + p[0] * u, oy + p[1] * u]; } : makeIso(ox, oy, u, deg), items = [];
   if (F.ground) items.push({ strokes: groundContext(r, boxes, g, iso) });
-  var flags = { hatchlight: F.hatchlight, r: r };
+  var flags = { hatchlight: F.hatchlight, r: r, cam: cam };
   boxes.forEach(function (b) { items.push(boxDrawing2(b, iso, u, flags)); });
   return items;
 }

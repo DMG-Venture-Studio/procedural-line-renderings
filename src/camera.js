@@ -1,4 +1,5 @@
-/* Projections: axonometric, facade-plane two-point, and a pinhole camera. */
+/* Projections: axonometric, facade-plane two-point, a pinhole camera, and the similarity fit that
+   places a projected drawing into a box without changing its perspective. */
 
 /** Axonometric projection. ox, oy: screen origin. u: px per unit. deg: axis angle (30 = isometric). */
 export function makeIso(ox, oy, u, deg) {
@@ -22,12 +23,42 @@ function dot(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
 
 /** Pinhole camera with unit focal length. C: camera position. T: aim point (same height as C for
     two-point). pitch: upward tilt, 0 for two-point, > 0 for three-point with converging verticals.
-    Returns a function from world [x, y, z] to screen [x, y]; fit the result with a 2D similarity. */
+    Returns a function from world [x, y, z] to screen [x, y]; fit the result with a 2D similarity.
+    The function also carries `.C` (the camera position) for visibility tests. */
 export function pinhole(C, T, pitch) {
   var f = norm([T[0] - C[0], T[1] - C[1], (pitch || 0) * 20]);
   var rt = norm(cross(f, [0, 0, 1])), up = cross(rt, f);
-  return function (P) {
+  function cam(P) {
     var v = [P[0] - C[0], P[1] - C[1], P[2] - C[2]], z = Math.max(0.05, dot(v, f));
     return [dot(v, rt) / z, -dot(v, up) / z];
-  };
+  }
+  cam.C = C; cam.f = f;
+  return cam;
+}
+
+/** True when a face with outward normal n at point p faces the camera at C. */
+export function facesCamera(n, p, C) {
+  return dot(n, [C[0] - p[0], C[1] - p[1], C[2] - p[2]]) > 0;
+}
+
+/** Fit projected items into region R with a uniform scale and a translation, which preserves
+    perspective. The drawing's bounding box is scaled to fit R with the given padding fractions,
+    centred horizontally and aligned to the bottom (its lowest stroke lands at R's bottom minus
+    padBottom). Items must be {fills, glows, strokes} in projected units. Returns fitted items. */
+export function fitSimilarity(items, R, pad) {
+  pad = pad || {};
+  var x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  items.forEach(function (it) { it.strokes.forEach(function (s) { s.forEach(function (q) { x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); y0 = Math.min(y0, q[1]); y1 = Math.max(y1, q[1]); }); }); });
+  if (!isFinite(x0)) return items;
+  var padX = pad.x == null ? 0.04 : pad.x, padTop = pad.top == null ? 0.06 : pad.top, padBottom = pad.bottom == null ? 0.08 : pad.bottom;
+  var s = Math.min(R.w * (1 - 2 * padX) / Math.max(1e-6, x1 - x0), R.h * (1 - padTop - padBottom) / Math.max(1e-6, y1 - y0));
+  var ox = R.x + (R.w - (x1 - x0) * s) / 2 - x0 * s, oy = R.y + R.h * (1 - padBottom) - y1 * s;
+  function fp(p) { return [ox + p[0] * s, oy + p[1] * s]; }
+  return items.map(function (it) {
+    return {
+      fills: (it.fills || []).map(function (poly) { return poly.map(fp); }),
+      glows: (it.glows || []).map(function (g) { return { poly: g.poly.map(fp), k: g.k }; }),
+      strokes: it.strokes.map(function (st) { return [fp(st[0]), fp(st[1])]; })
+    };
+  });
 }
