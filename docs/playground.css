@@ -18,3 +18,8 @@
 .pg-snip-head { display: flex; justify-content: space-between; align-items: center; font-size: var(--t--1); color: var(--muted); margin-bottom: 6px; }
 .pg pre { margin: 0; background: var(--surface); padding: 12px 14px; overflow-x: auto; font-family: var(--f-mono); font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
 [data-theme-toggle] { font: inherit; font-size: var(--t--1); padding: 5px 12px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; }
+
+/* The flag grid is driven by randomize: show the chosen set, greyed. */
+.pg-flags.pg-driven { opacity: .55; }
+.pg-flags.pg-driven label { cursor: default; }
+input[type=range][name=randomize] { width: 12rem; vertical-align: middle; }

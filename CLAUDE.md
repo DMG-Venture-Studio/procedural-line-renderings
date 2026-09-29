@@ -31,8 +31,9 @@ src/millwork.js     trim and roof profiles drawn in facade coordinates
 src/ink.js          bay windows, rounded corner, deep cornice, shade hatching, fence, stoop, planters
 src/wfc.js          Wave Function Collapse solver (kept for tile and lot decisions; draws nothing)
 src/render.js       progress renderer with glows, draw-in, bounce, reduced motion
-src/massing.js      box clusters, painter's order, terraces, towers, gables, openings, perspective
-src/corner.js       the street corner scene (corner4), perspective 2 or 3, presets
+src/corner.js       the street corner scene (corner4), perspective 2 or 3, presets; exports its facade helpers
+src/facades.js      the corner grammar on box faces (massing facades) and the street set around the plot
+src/massing.js      box clusters, painter's order, terraces, towers, gables, mansards, facades, perspective
 src/skyline.js      the 3D city block skyline, perspective 1, 2 or 3
 src/plan.js         the floor plan
 src/components.js   the four Web Components, options parsing, snippetFor
@@ -68,6 +69,15 @@ users read them directly. Never edit them by hand.
   changes the drawing for at least one seed. The docs tables and playground
   checkboxes are generated from the schema, so they need no edit. Enumerated
   choices (the camera model) are params in `PARAMS`; bundles are `PRESETS`.
+- `randomize` is resolved inside every generator by `randomizeOptions`, from
+  the generator's own `r`, before `resolve`. Flags named in the options are
+  pinned; the `camera` family is never randomized. Every generator returns
+  the flags it drew on `items.options`; the component exposes them as
+  `resolvedOptions` and on the `seed` event. Keep that contract when adding
+  a generator.
+- The massing's facade families reuse the corner's exported helpers through
+  `src/facades.js`. Add facade features to the corner first, then expose the
+  flag on the massing in `MASSING_OPTIONS` under the same family name.
 - The build concatenates every module into one scope. Top-level names must
   be unique across `src/`; prefix helpers with the module's name when in doubt.
 - Perspective is one pinhole camera for every mode. Do not add a second

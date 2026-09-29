@@ -59,6 +59,7 @@
     var persp = pg.q('[name=perspective]'); if (persp) s.options.perspective = Number(persp.value);
     var look = pg.q('[name=look]'); s.look = look ? look.value : '';
     s.seed = pg.q('[name=seed]').value; s.mode = pg.q('[name=mode]').value; s.reseed = pg.q('[name=reseed]').value;
+    s.randomize = +pg.q('[name=randomize]').value || 0;
     s.nightSel = pg.q('[name=night]').value;
     s.night = s.nightSel === 'page' ? pageNight() : s.nightSel === 'night';
     var glowOn = pg.q('[name=glowOn]'); s.glowOn = glowOn ? glowOn.checked : false; s.glow = glowOn ? pg.q('[name=glow]').value : '';
@@ -69,10 +70,16 @@
   /** Push a state onto the element's attributes and style. Options carry only the non-default flags;
        a chosen preset is carried by the preset attribute and its flags are dropped from options. */
   function apply(pg, s) {
-    var el = pg.el, diff = P.diffFromDefaults(pg.kind, s.options);
+    var el = pg.el, diff = s.randomize > 0 ? {} : P.diffFromDefaults(pg.kind, s.options);
+    if (s.randomize > 0) { el.setAttribute('randomize', String(s.randomize)); if (s.options.perspective !== undefined) diff.perspective = s.options.perspective; }
+    else el.removeAttribute('randomize');
+    pg.q('[data-randomize-out]').textContent = s.randomize > 0 ? s.randomize + ' to 1' : 'off';
+    pg.root.querySelectorAll('input[data-flag]').forEach(function (c) { c.disabled = s.randomize > 0; });
+    pg.root.querySelector('.pg-flags').classList.toggle('pg-driven', s.randomize > 0);
     if (s.look) { el.setAttribute('preset', s.look); var base = P.PRESETS[pg.kind][s.look] || {}; for (var k in base) if (diff[k] === base[k]) delete diff[k]; }
     else el.removeAttribute('preset');
-    if (diff.perspective !== undefined) { el.setAttribute('perspective', String(diff.perspective)); delete diff.perspective; } else el.removeAttribute('perspective');
+    if (diff.perspective !== undefined && diff.perspective !== (perspectiveParam(pg.kind) || {}).def) { el.setAttribute('perspective', String(diff.perspective)); } else el.removeAttribute('perspective');
+    delete diff.perspective;
     if (Object.keys(diff).length) el.setAttribute('options', JSON.stringify(diff)); else el.removeAttribute('options');
     if (s.seed !== '') el.setAttribute('seed', s.seed); else el.removeAttribute('seed');
     el.setAttribute('mode', s.mode); el.setAttribute('reseed', s.reseed);
@@ -93,6 +100,7 @@
     pg.q('[data-snippet=html]').textContent = '<script src="procedural-line-renderings.js"></script>\n' + el.snippet;
     var opts = P.diffFromDefaults(pg.kind, el.options), night = el.hasAttribute('night');
     if (s.look) opts.preset = s.look;
+    if (s.randomize > 0) opts.randomize = s.randomize;
     var color = el.getAttribute('color') || (night ? P.NIGHT.color : '#C4C6CB'), page = el.getAttribute('page') || (night ? P.NIGHT.page : '#FFFFFF');
     var glow = P.GLOW_KINDS[pg.kind] ? (el.getAttribute('glow') || (night ? P.NIGHT.glow : null)) : null, prob = night ? P.NIGHT.glowProb : 0.35;
     var seedExpr = s.seed !== '' ? s.seed : "P.clockSeed('" + pg.kind + "')";
@@ -159,6 +167,9 @@
         h('label', {}, ['reseed ', h('select', { name: 'reseed', html: '<option value="cycle">cycle</option><option value="never">never</option>' })]),
         h('button', { type: 'button', 'data-regen': '', text: 'Regenerate' }),
         h('code', { 'data-seed': '' })
+      ]),
+      h('div', { class: 'pg-row' }, [
+        h('label', { title: 'Pick a random subset of the flags on every seed, with coverage between this fraction and all of them. Camera flags are never randomized; the grid shows what was chosen.' }, ['randomize ', h('input', { type: 'range', name: 'randomize', min: '0', max: '1', step: '0.05', value: '0' }), ' ', h('code', { 'data-randomize-out': '', text: 'off' })])
       ])
     ]);
   }
@@ -189,7 +200,12 @@
     root.querySelectorAll('input, select').forEach(function (c) { c.addEventListener('change', update); });
     var look = pg.q('[name=look]'); if (look) look.addEventListener('change', function () { applyPresetToGrid(pg); update(); });
     pg.q('[data-regen]').addEventListener('click', function () { el.regenerate(); });
-    el.addEventListener('seed', function (e) { pg.q('[data-seed]').textContent = 'seed ' + e.detail.seed; refreshSnippets(pg, readState(pg)); });
+    el.addEventListener('seed', function (e) {
+      pg.q('[data-seed]').textContent = 'seed ' + e.detail.seed;
+      var s = readState(pg);
+      if (s.randomize > 0 && e.detail.options) pg.root.querySelectorAll('input[data-flag]').forEach(function (c) { c.checked = !!e.detail.options[c.dataset.flag]; });
+      refreshSnippets(pg, s);
+    });
     copyHtml.addEventListener('click', function () { copy(preHtml, copyHtml); });
     copyJs.addEventListener('click', function () { copy(preJs, copyJs); });
     mounted.push(pg);

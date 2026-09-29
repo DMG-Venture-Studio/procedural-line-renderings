@@ -23,21 +23,33 @@ https://dmg-venture-studio.github.io/procedural-line-renderings/
   fill colour; match the background), `glow` (hex; lights a random subset of
   windows; ignored by the plan), `night` (dark page, light lines, glow on),
   `perspective` (corner 2 or 3; massing 0, 2 or 3; skyline 1, 2 or 3; one
-  pinhole camera for all of them), `preset` (corner: `ink`). Street corner
-  shorthands: `pitch` (perspective 3), `full`.
+  pinhole camera for all of them), `preset` (corner: `ink`), `randomize`
+  (a fraction; on every seed pick a random subset of the flags with coverage
+  between it and 1, pinning any flag set in `options` and never touching
+  camera flags). Street corner shorthands: `pitch` (perspective 3), `full`.
 - **Flags:** every drawable feature is a flag in the library's `OPTIONS`
   schema. Street corner families: camera, massing, windows, ornament,
   millwork (architraves, lintels, shutters, stringCourses, dentils,
   pediments, pilasters, transoms, parapetCaps, fireEscapes), ink (bays,
   roundedCorner, deepCornice, shadowHatch, fence, stoop, planters, arches),
   street, depth, roof (rooftops, gables, mansards). Massing: terraces, towers,
-  courtyards, cantilevers, hatchlight, openings, gables, ground, exploded,
-  randomAngle. Skyline: setbacks, podiums, dense, spires, domes, masts,
-  crowns, floorLines, mullions, street.
-  Read `element.options` for the resolved set; the README lists defaults.
+  courtyards, cantilevers, hatchlight, plus the same windows, ornament,
+  millwork, ink, street, depth and roof families as the corner (any one on
+  gives every non-tower box a facade on its visible faces), gables, mansards,
+  ground, exploded, randomAngle. Skyline: setbacks, podiums, dense, spires,
+  domes, masts, crowns, floorLines, mullions, street.
+  Read `element.options` for the declared set and `element.resolvedOptions`
+  for what was drawn; the README lists defaults.
 - **Methods and events:** `regenerate()`, `stop()`, the `seed` property, the
-  `options` property, the `snippet` property (the tag that reproduces the
-  current state), and a `seed` event with `detail.seed` on every draw.
+  `options` and `resolvedOptions` properties, the `snippet` property (the tag
+  that reproduces the current state; with randomize it carries the fraction,
+  not the chosen set), and a `seed` event with `detail.seed` and
+  `detail.options` on every draw.
+- **A site hero that varies:** `<dmg-street-corner randomize="0.5">` gives a
+  different feature mix every cycle with at least half the flags on, the
+  camera left as set. **A closing band:** `<dmg-skyline perspective="2" night
+  glow mode="bounce" reseed="cycle">` on a black band; `night` supplies the
+  black page colour.
 - **Sizing:** the element is a block; give it a width and height, or a width
   and an `aspect-ratio`, and it fits the drawing to that box. Keep text out
   of the box. The element never measures its siblings; placement is the

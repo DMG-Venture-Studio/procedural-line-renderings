@@ -31,6 +31,8 @@
   .muted { color: var(--muted); }
   .example { border: 1px solid var(--line); height: 60vh; min-height: 380px; margin: 16px 0 8px; }
   .example > * { width: 100%; height: 100%; }
+  .band { background: #0E0E10; height: 52vh; min-height: 320px; margin: 16px 0 8px; }
+  .band > * { width: 100%; height: 100%; }
   .caption { color: var(--muted); font-size: var(--t--1); margin-bottom: 32px; }
   table { border-collapse: collapse; width: 100%; max-width: 80ch; margin: 16px 0 24px; font-size: var(--t--1); }
   th, td { text-align: left; vertical-align: top; padding: 8px 12px 8px 0; border-top: 1px solid var(--line); }
@@ -68,6 +70,11 @@
 <div class="example"><dmg-street-corner data-follow-night></dmg-street-corner></div>
 <p class="caption"><code>&lt;dmg-street-corner&gt;</code> with defaults. Reload for another.</p>
 
+<h2 id="band">Closing band</h2>
+<p>The combination a site puts on a black band under its last call to action: a two-point skyline, night, glowing windows, bouncing and reseeding. <code>night</code> sets the page colour to black by itself, so the element needs no <code>page</code> attribute to sit on a dark band.</p>
+<div class="band"><dmg-skyline perspective="2" night glow mode="bounce" reseed="cycle"></dmg-skyline></div>
+<p class="caption"><code>&lt;dmg-skyline perspective="2" night glow mode="bounce" reseed="cycle"&gt;</code></p>
+
 <h2 id="use">Use</h2>
 <p>Script tag, no bundler. The file registers all four elements and exposes the generators on <code>window.ProceduralLines</code>.</p>
 <pre><code>&lt;script src="procedural-line-renderings.js"&gt;&lt;/script&gt;
@@ -76,7 +83,9 @@
 &lt;dmg-street-corner preset="ink" perspective="3"&gt;&lt;/dmg-street-corner&gt;
 &lt;dmg-massing seed="42" mode="once" perspective="2"&gt;&lt;/dmg-massing&gt;
 &lt;dmg-skyline night perspective="1"&gt;&lt;/dmg-skyline&gt;
-&lt;dmg-street-corner options='{"shutters":true,"pediments":true,"trees":false}' glow="#F2D08A"&gt;&lt;/dmg-street-corner&gt;</code></pre>
+&lt;dmg-street-corner options='{"shutters":true,"pediments":true,"trees":false}' glow="#F2D08A"&gt;&lt;/dmg-street-corner&gt;
+&lt;dmg-street-corner randomize="0.5"&gt;&lt;/dmg-street-corner&gt;
+&lt;dmg-massing options='{"winArch":true,"quoins":true,"stoop":true,"fence":true,"kerb":true}'&gt;&lt;/dmg-massing&gt;</code></pre>
 <p>ES modules, from the repository's <code>src/</code>:</p>
 <pre><code>import '@dmg-venture-studio/procedural-line-renderings';
 import { corner4, skyline, rng, bounce } from '@dmg-venture-studio/procedural-line-renderings';</code></pre>
@@ -89,7 +98,8 @@ import { corner4, skyline, rng, bounce } from '@dmg-venture-studio/procedural-li
 <div data-playground="corner"></div>
 
 <h3><code>&lt;dmg-massing&gt;</code></h3>
-<p>A massing model: stepped terraces with railings and stairs, towers with floor lines and mullions, courtyard footprints, cantilevers on columns, gable roofs, windows on a floor grid, a drawn site, an exploded view, and a light study in three hatch weights. Axonometric by default; perspective 2 puts the pinhole camera above and outside the cluster, 3 puts it low and pitched up. Hidden lines are removed by painting far to near, and the underside of a raised box appears when the camera stands below it.</p>
+<p>A massing model: stepped terraces with railings and stairs, towers with floor lines and mullions, courtyard footprints, cantilevers on columns, gable and mansard roofs, a drawn site, an exploded view, and a light study in three hatch weights. Axonometric by default; perspective 2 puts the pinhole camera above and outside the cluster, 3 puts it low and pitched up. Hidden lines are removed by painting far to near, and the underside of a raised box appears when the camera stands below it.</p>
+<p>The massing also carries the street corner's facade families. Switch on any window, ornament, millwork, ink, depth or roof flag and every non-tower box gets a facade on its two visible faces, drawn with the corner's own grammar scaled so one box unit is one floor: window families, quoins, string courses, dentils, pediments, pilasters, fire escapes, curved bay windows, deep cornices, shade hatching, balconies, awnings, stoops and planters at ground level, rooftop objects. The street flags lay a kerb, road dashes, lamps, trees and the iron fence along the plot's two street edges, with a gate at every door.</p>
 <div data-playground="massing"></div>
 
 <h3><code>&lt;dmg-skyline&gt;</code></h3>
@@ -111,6 +121,7 @@ import { corner4, skyline, rng, bounce } from '@dmg-venture-studio/procedural-li
   <tr><td><code>perspective</code></td><td>corner <code>2</code> <code>3</code>; massing <code>0</code> <code>2</code> <code>3</code>; skyline <code>1</code> <code>2</code> <code>3</code></td><td>2, 0, 2</td><td>The camera model, all through one pinhole camera. The corner rejects <code>1</code> with a console warning and falls back to <code>2</code>. Not on the plan.</td></tr>
   <tr><td><code>preset</code></td><td><code>ink</code></td><td>none</td><td>Street corner only: a named bundle of flags. Flags in <code>options</code> override it.</td></tr>
   <tr><td><code>options</code></td><td>JSON object</td><td>none</td><td>Feature flags for this component, see the tables below. Only the flags you set are needed.</td></tr>
+  <tr><td><code>randomize</code></td><td>fraction 0 to 1</td><td>off</td><td>On every seed, choose a random subset of the flags with coverage drawn between this fraction and 1. Flags set in <code>options</code> are pinned and camera flags are never touched. The chosen set is on <code>element.resolvedOptions</code> and in the <code>seed</code> event.</td></tr>
   <tr><td><code>color</code></td><td>CSS colour</td><td><code>#C4C6CB</code>, night <code>#A8AAB0</code></td><td>Stroke colour.</td></tr>
   <tr><td><code>page</code></td><td>CSS colour</td><td><code>#FFFFFF</code>, night <code>#0E0E10</code></td><td>Page colour used for hidden-line fills. Match your background.</td></tr>
   <tr><td><code>glow</code></td><td>hex colour</td><td>off, night <code>#F2D08A</code></td><td>Light a random subset of windows in this colour with a soft shadow. Ignored by the plan.</td></tr>
@@ -125,9 +136,10 @@ import { corner4, skyline, rng, bounce } from '@dmg-venture-studio/procedural-li
   <tr><td><code>element.regenerate()</code></td><td>Draws a new sibling from a fresh clock seed.</td></tr>
   <tr><td><code>element.stop()</code></td><td>Halts the animation and leaves the last frame.</td></tr>
   <tr><td><code>element.seed</code></td><td>The seed of the drawing on screen. Setting it redraws.</td></tr>
-  <tr><td><code>element.options</code></td><td>The resolved flags and params in effect, defaults filled in.</td></tr>
+  <tr><td><code>element.options</code></td><td>The declared flags and params with defaults filled in, before any randomized draw.</td></tr>
+  <tr><td><code>element.resolvedOptions</code></td><td>The flags actually drawn, with any randomized draw applied. Null before the first draw.</td></tr>
   <tr><td><code>element.snippet</code></td><td>The HTML tag that reproduces the current state, non-default flags only.</td></tr>
-  <tr><td><code>seed</code> event</td><td>Fires on every draw with <code>event.detail.seed</code>.</td></tr>
+  <tr><td><code>seed</code> event</td><td>Fires on every draw with <code>event.detail.seed</code> and <code>event.detail.options</code>, the resolved flags.</td></tr>
 </table>
 
 <h3>Flags by component</h3>

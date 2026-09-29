@@ -40,7 +40,7 @@ the equivalent API call for whatever is switched on.
 | Element | What it draws |
 |---|---|
 | `<dmg-street-corner>` | Two rows of buildings at a corner through a pinhole camera: split-grammar facades, five window families, rooftops, gaps, ornament, twelve kinds of millwork, the street in front, optional depth features and a back row, and an `ink` preset with bay windows, a rounded corner, a deep cornice, shade hatching, a fence, stoops, planters and arches. Two- or three-point. |
-| `<dmg-massing>` | A massing model: terraces, towers, courtyards, cantilevers, gables, openings, a drawn site, an exploded view, a light study. Axonometric by default, or two- or three-point through the pinhole camera. Hidden lines removed. |
+| `<dmg-massing>` | A massing model: terraces, towers, courtyards, cantilevers, gables and mansards, a drawn site, an exploded view, a light study, and the street corner's facade families on every box face (window families, ornament, millwork, ink pieces, balconies, awnings, rooftops) with the street set along the plot edges. Axonometric by default, or two- or three-point through the pinhole camera. Hidden lines removed. |
 | `<dmg-skyline>` | A 3D city block of towers with setbacks, spires, domes, masts and columned crowns, every visible face carrying floor lines and mullions. One-point down an avenue, two-point from a corner, or three-point looking up. |
 | `<dmg-plan>` | A floor plan by recursive subdivision with door swings, windows, poche, and a stair. |
 
@@ -54,6 +54,7 @@ the equivalent API call for whatever is switched on.
 | `perspective` | see below | per component | The camera model. Not on the plan. |
 | `preset` | `ink` | none | Street corner only: a named bundle of flags. Flags in `options` override it. |
 | `options` | JSON object | none | Feature flags for this component (tables below). Only the flags you set are needed. |
+| `randomize` | fraction 0 to 1 | off | On every seed, pick a random subset of the flags with coverage between this fraction and 1. Flags in `options` are pinned; camera flags are never touched. The chosen set is `element.resolvedOptions` and rides on the `seed` event. |
 | `color` | CSS colour | `#C4C6CB`, night `#A8AAB0` | Stroke colour. |
 | `page` | CSS colour | `#FFFFFF`, night `#0E0E10` | Page colour used for hidden-line fills. Match your background. |
 | `glow` | hex colour | off, night `#F2D08A` | Light a random subset of windows in this colour with a soft shadow. Ignored by the plan, which has no windows. |
@@ -110,8 +111,35 @@ The `ink` preset turns on every ink flag plus dentils, brackets, architraves
 and balconies, turns off towers, gaps, the back row and rooftops, and stands
 the camera close, which together approximate a pen-and-ink corner house.
 
-Massing: **terraces**, **towers**, courtyards, cantilevers, **hatchlight**,
-openings, gables, ground, exploded, randomAngle.
+Massing, by family. Any window, ornament, millwork, ink, depth or roof flag
+gives every non-tower box a facade on its two visible faces, drawn with the
+corner grammar scaled so one box unit is one floor.
+
+| Family | Flags |
+|---|---|
+| massing | **terraces**, **towers**, courtyards, cantilevers |
+| light | **hatchlight** |
+| windows | openings, winRect, winArch, winTall, winPaired, winGrid |
+| ornament | brackets, quoins, keystones, rustication |
+| millwork | architraves, lintels, shutters, stringCourses, dentils, pediments, pilasters, transoms, parapetCaps, fireEscapes |
+| ink | bays, deepCornice, shadowHatch, fence, stoop, planters, arches |
+| street | kerb, roadDashes, lamps, trees |
+| depth | balconies, awnings |
+| roof | rooftops, gables, mansards |
+| context | ground, exploded |
+| camera | randomAngle |
+
+### Randomize
+
+`randomize="0.5"` picks, on every seed, a random subset of the component's
+flags with coverage drawn uniformly between 0.5 and 1. The draw comes from
+the same seeded generator as the drawing, so a seed always picks the same
+subset. Flags you set in `options` (or through a preset) are pinned and left
+out of the draw; camera flags (`randomCamera`, `closeCamera`, `randomAngle`)
+and `perspective` are never randomized. Read the chosen set from
+`element.resolvedOptions` or from `event.detail.options` on the `seed`
+event; the snippet carries `randomize`, not the chosen set. With the API,
+pass `{ randomize: 0.5 }` and read `items.options` on the returned drawing.
 
 Skyline: **setbacks**, **podiums**, dense, **spires**, **domes**, **masts**,
 **crowns**, **floorLines**, **mullions**, **street**.
@@ -147,7 +175,7 @@ in canvas px.
 | Function | What it makes |
 |---|---|
 | `corner4(r, region, options)` | The street corner. Also exported as `streetCorner`. Options include `perspective` and `preset`. |
-| `massing3(r, region, options)` | The massing scene. Options include `perspective`. |
+| `massing3(r, region, options)` | The massing scene. Options include `perspective`, the facade families, and `randomize`. |
 | `skyline(r, region, options)` | The city-block skyline. Options include `perspective`. |
 | `plan(r, region, options)` | The floor plan. |
 | `massing(r, {count, grid})`, `boxDrawing2(box, proj, u, flags)` | Raw box clusters and their drawings. |
@@ -155,7 +183,8 @@ in canvas px.
 | `wfc(r, tiles, cols, rows, bounds, tries)` | The Wave Function Collapse solver, kept for lot and tile decisions. |
 | `makeIso`, `facadePoint`, `pinhole`, `facesCamera`, `fitSimilarity` | Projections, a face visibility test, and the similarity fit. |
 | `renderTo`, `drawIn`, `bounce`, `totalLength`, `speedsFor` | Rendering and the two animation runners. `renderTo` takes `glow` and `glowProb`. |
-| `OPTIONS`, `PARAMS`, `PRESETS`, `GLOW_KINDS`, `defaults(kind)`, `resolve(kind, opts)`, `diffFromDefaults(kind, opts)` | The option schemas and helpers. |
+| `OPTIONS`, `PARAMS`, `PRESETS`, `GLOW_KINDS`, `defaults(kind)`, `resolve(kind, opts)`, `diffFromDefaults(kind, opts)`, `randomizeOptions(kind, r, opts)` | The option schemas and helpers. Every generator returns its resolved options on `items.options`. |
+| `faceFacade(r, proj, box, 'x' or 'y', recipe, ground, withDoor)` | The corner grammar on one face of a box. |
 | `snippetFor(element, kind)` | The HTML that reproduces an element's state. |
 | `rng(seed)`, `hashSeed(str)`, `clockSeed(label)`, `pick(r, arr)` | Seeded randomness. |
 

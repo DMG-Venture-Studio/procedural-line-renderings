@@ -283,3 +283,21 @@ every opening, and the soffit of a deep cornice, as parallel line fields at
 stoops and cornices project from the wall, so draw them as their own items
 with page-colour fills, right after the wall they sit on, or the wall's lines
 will show through them.
+
+### 15. Randomize as a feature of the seed
+
+A drawing that should vary in kind, not only in layout, draws its own flag
+set: coverage uniform between a floor and 1, then a seeded shuffle of the
+eligible flags. Do it with the generator's own random function, before
+resolving defaults, so the choice is part of the seed and a seed can be
+quoted. Pin anything the author set explicitly and never randomize the
+camera, or the composition the page was designed around changes underneath
+it. Return the chosen flags with the drawing so the page can show them.
+
+### 16. Facades on any face
+
+The facade grammar needs only a projection from (d along, h up, e outward)
+to the screen. A box face is such a plane: map d and h along the face and e
+along its outward normal, scale so one floor is one box unit, and the same
+window families, trim, cornices and bay windows that dress a street building
+dress a massing box. Doors on faces at the plot edge give the fence its gates.
