@@ -1,23 +1,32 @@
 /* The street corner: a 3D street seen through a pinhole camera, fitted to a region.
-   Default recipe: split-grammar facades with window families and rooftops, gaps in the street
-   wall, ornament, and the street in front (kerb, lamps, trees). opts.full adds a back row,
-   balconies, awnings, setbacks and a closer camera. opts.pitch tilts the camera up (three-point). */
+   Every feature is a flag in CORNER_OPTIONS (src/options.js). The default recipe is
+   split-grammar facades with window families, rooftops, gaps, ornament, and the street in
+   front. The legacy shorthands `full` (the crowded recipe) and `pitch` still work. */
 import { pick } from './random.js';
 import { pinhole } from './camera.js';
 import { windowOf } from './grammar.js';
+import { resolve } from './options.js';
+import * as mw from './millwork.js';
 
 /** A side of the street: pt(d, h, e) -> world, e outward from the facade toward the camera. */
 function side(isRight) {
   return { pt: isRight ? function (d, h, e) { return [d, -e, h]; } : function (d, h, e) { return [-e, d, h]; } };
 }
 
+/** Resolve options, expanding the legacy `full` shorthand into its flags. */
+function cornerOptions(opts) {
+  var o = resolve('corner', opts);
+  if (opts && opts.full) { o.backRow = true; o.balconies = true; o.awnings = true; o.setbacks = true; o.closeCamera = true; }
+  return o;
+}
+
 /** Ornament on a facade: cornice brackets, rustication joints, alternating quoins. */
-function ornament(o, W, H, gh, fh, line, rect) {
-  if (o.brackets) for (var d = 0.4; d < W; d += 0.6) line(d, H - 0.3, d, H - 0.6, 0);
-  if (o.rustication && gh > 0) for (var hh = 0.6; hh < gh; hh += 0.6) line(0, hh, W, hh, 0);
-  if (o.quoins) for (var q = gh; q < H - 0.6; q += fh / 2) {
-    var qw = (Math.round(q / (fh / 2)) % 2) ? 0.45 : 0.7;
-    rect(0, q, qw, q + fh / 2, 0); rect(W - qw, q, W, q + fh / 2, 0);
+function ornament(o, g) {
+  if (o.brackets) for (var d = 0.4; d < g.W; d += 0.6) g.line(d, g.H - 0.3, d, g.H - 0.6, 0);
+  if (o.rustication && g.gh > 0) for (var hh = 0.6; hh < g.gh; hh += 0.6) g.line(0, hh, g.W, hh, 0);
+  if (o.quoins) for (var q = g.gh; q < g.H - 0.6; q += g.fh / 2) {
+    var qw = (Math.round(q / (g.fh / 2)) % 2) ? 0.45 : 0.7;
+    g.rect(0, q, qw, q + g.fh / 2, 0); g.rect(g.W - qw, q, g.W, q + g.fh / 2, 0);
   }
 }
 
@@ -38,48 +47,81 @@ function awning(d0, d1, gh, line) {
 }
 
 /** Rooftop objects set a little behind the parapet. */
-function rooftops(r, W, H, line, rect) {
-  var n = Math.floor(r() * 3.4), used = 1;
+function rooftops(r, g) {
+  var n = Math.floor(r() * 3.4), used = 1, W = g.W, H = g.H;
   for (var i = 0; i < n && used < W - 4; i++) {
     var d = used + r() * 1.5, kind = pick(r, ['chimney', 'tank', 'bulkhead', 'antenna', 'billboard']), e = -(1 + r() * 3);
-    if (kind === 'chimney') { rect(d, H, d + 0.8, H + 1.3, e); used = d + 1.2; }
-    else if (kind === 'tank') { line(d, H, d, H + 1.2, e); line(d + 1.6, H, d + 1.6, H + 1.2, e); rect(d - 0.1, H + 1.2, d + 1.7, H + 2.8, e); line(d - 0.1, H + 2.8, d + 0.8, H + 3.3, e); line(d + 0.8, H + 3.3, d + 1.7, H + 2.8, e); used = d + 2.2; }
-    else if (kind === 'bulkhead') { rect(d, H, d + 2, H + 1.2, e); rect(d + 0.7, H, d + 1.3, H + 0.9, e); used = d + 2.5; }
-    else if (kind === 'antenna') { line(d, H, d, H + 2.6, e); line(d - 0.4, H + 1.8, d + 0.4, H + 1.8, e); line(d - 0.3, H + 2.2, d + 0.3, H + 2.2, e); used = d + 0.8; }
-    else { line(d, H, d, H + 1, e); line(d + 4, H, d + 4, H + 1, e); rect(d, H + 1, d + 4, H + 3, e); used = d + 4.5; }
+    if (kind === 'chimney') { g.rect(d, H, d + 0.8, H + 1.3, e); used = d + 1.2; }
+    else if (kind === 'tank') { g.line(d, H, d, H + 1.2, e); g.line(d + 1.6, H, d + 1.6, H + 1.2, e); g.rect(d - 0.1, H + 1.2, d + 1.7, H + 2.8, e); g.line(d - 0.1, H + 2.8, d + 0.8, H + 3.3, e); g.line(d + 0.8, H + 3.3, d + 1.7, H + 2.8, e); used = d + 2.2; }
+    else if (kind === 'bulkhead') { g.rect(d, H, d + 2, H + 1.2, e); g.rect(d + 0.7, H, d + 1.3, H + 0.9, e); used = d + 2.5; }
+    else if (kind === 'antenna') { g.line(d, H, d, H + 2.6, e); g.line(d - 0.4, H + 1.8, d + 0.4, H + 1.8, e); g.line(d - 0.3, H + 2.2, d + 0.3, H + 2.2, e); used = d + 0.8; }
+    else { g.line(d, H, d, H + 1, e); g.line(d + 4, H, d + 4, H + 1, e); g.rect(d, H + 1, d + 4, H + 3, e); used = d + 4.5; }
   }
 }
 
-/** One building on a side, in 3D. Returns {fills, strokes}. The fill is the facade quad for hidden lines. */
-function building(r, cam, S, o) {
-  var strokes = [], fills = [], W = o.width, gh = o.groundH, h0 = o.h0 || 0, F = o.floors, fh = o.floorH, H = gh + F * fh;
-  function P(d, h, e) { return cam(S.pt(o.off + d, h0 + h, e || 0)); }
-  function line(d0, hA, d1, h1, e0, e1) { strokes.push([P(d0, hA, e0), P(d1, h1, e1 == null ? e0 : e1)]); }
-  function rect(d0, hA, d1, h1, e) { line(d0, hA, d1, hA, e); line(d1, hA, d1, h1, e); line(d1, h1, d0, h1, e); line(d0, h1, d0, hA, e); }
-  var win = windowOf(o.window, line, function (a, b, c, d) { rect(a, b, c, d, 0); });
-  fills.push([P(0, 0, 0), P(W, 0, 0), P(W, H, 0), P(0, H, 0)]);
-  rect(0, 0, W, H, 0);
-  if (gh > 0) line(0, gh, W, gh, 0);
-  line(0, H - 0.3, W, H - 0.3, 0);
-  ornament(o, W, H, gh, fh, line, rect);
-  var bays = Math.max(1, Math.floor(W / o.bayW)), rb = W / bays, door = o.door ? Math.floor(r() * bays) : -1;
-  for (var fl = 0; fl < F; fl++) {
-    var base = gh + fl * fh, balconyFloor = o.balconies && r() < 0.4;
+/** The window trim chosen for one building, applied around one opening. */
+function trim(o, g, d0, h0, d1, h1) {
+  if (o.architraves) mw.architrave(g, d0, h0, d1, h1);
+  if (o.lintels) mw.lintel(g, d0, h0, d1, h1);
+  if (o.shutters) mw.shutters(g, d0, h0, d1, h1);
+  if (o.pediments) mw.pediment(g, d0, h0, d1, h1);
+}
+
+/** The upper floors of a building: windows, sills, trim, balconies. */
+function floors(r, o, g, bays, rb, win) {
+  for (var fl = 0; fl < g.F; fl++) {
+    var base = g.gh + fl * g.fh, balconyFloor = o.balconies && r() < 0.4;
     for (var b = 0; b < bays; b++) {
-      var d0 = b * rb + rb * 0.25, d1 = (b + 1) * rb - rb * 0.25;
-      win(d0, base + fh * 0.25, d1, base + fh * 0.8);
-      if (o.window === 'arch') line((d0 + d1) / 2, base + fh * 0.8, (d0 + d1) / 2, base + fh * 0.95, 0);
-      line(d0 - rb * 0.05, base + fh * 0.25, d1 + rb * 0.05, base + fh * 0.25, 0);
-      if (balconyFloor && r() < 0.6) balcony(d0, d1, base + fh * 0.2, line);
+      var d0 = b * rb + rb * 0.25, d1 = (b + 1) * rb - rb * 0.25, h0 = base + g.fh * 0.25, h1 = base + g.fh * 0.8;
+      win(d0, h0, d1, h1);
+      g.glow(d0, h0, d1, h1);
+      if (o.window === 'arch' && o.keystones) g.line((d0 + d1) / 2, h1, (d0 + d1) / 2, base + g.fh * 0.95, 0);
+      g.line(d0 - rb * 0.05, h0, d1 + rb * 0.05, h0, 0);
+      trim(o, g, d0, h0, d1, h1);
+      if (balconyFloor && r() < 0.6) balcony(d0, d1, base + g.fh * 0.2, g.line);
     }
   }
-  if (gh > 0) for (b = 0; b < bays; b++) {
-    d0 = b * rb + rb * 0.25; d1 = (b + 1) * rb - rb * 0.25;
-    if (b === door) rect(d0, 0, d1, gh * 0.75, 0);
-    else { rect(d0, gh * 0.3, d1, gh * 0.85, 0); if (o.awnings && r() < 0.6) awning(d0, d1, gh, line); }
+}
+
+/** The ground floor: a door in one bay and shopfronts in the rest, with optional transoms and awnings. */
+function groundFloor(r, o, g, bays, rb, door) {
+  for (var b = 0; b < bays; b++) {
+    var d0 = b * rb + rb * 0.25, d1 = (b + 1) * rb - rb * 0.25;
+    if (b === door) { g.rect(d0, 0, d1, g.gh * 0.75, 0); if (o.transoms) g.line(d0, g.gh * 0.6, d1, g.gh * 0.6, 0); continue; }
+    g.rect(d0, g.gh * 0.3, d1, g.gh * 0.85, 0);
+    g.glow(d0, g.gh * 0.3, d1, g.gh * 0.85);
+    if (o.transoms) mw.transom(g, d0, g.gh * 0.3, d1, g.gh * 0.85);
+    if (o.awnings && r() < 0.6) awning(d0, d1, g.gh, g.line);
   }
-  if (o.roofscape) rooftops(r, W, H, line, rect);
-  return { fills: fills, strokes: strokes };
+}
+
+/** One building on a side, in 3D. Returns {fills, glows, strokes}. The fill is the facade quad. */
+function building(r, cam, S, o) {
+  var strokes = [], fills = [], glows = [], h0 = o.h0 || 0;
+  function P(d, h, e) { return cam(S.pt(o.off + d, h0 + h, e || 0)); }
+  var g = {
+    W: o.width, gh: o.groundH, F: o.floors, fh: o.floorH, H: o.groundH + o.floors * o.floorH,
+    line: function (d0, hA, d1, h1, e0, e1) { strokes.push([P(d0, hA, e0), P(d1, h1, e1 == null ? e0 : e1)]); },
+    rect: function (d0, hA, d1, h1, e) { g.line(d0, hA, d1, hA, e); g.line(d1, hA, d1, h1, e); g.line(d1, h1, d0, h1, e); g.line(d0, h1, d0, hA, e); },
+    glow: function (d0, hA, d1, h1) { glows.push({ poly: [P(d0, hA, 0), P(d1, hA, 0), P(d1, h1, 0), P(d0, h1, 0)], k: r() }); }
+  };
+  var win = windowOf(o.window, g.line, function (a, b, c, d) { g.rect(a, b, c, d, 0); });
+  fills.push([P(0, 0, 0), P(g.W, 0, 0), P(g.W, g.H, 0), P(0, g.H, 0)]);
+  g.rect(0, 0, g.W, g.H, 0);
+  if (g.gh > 0) g.line(0, g.gh, g.W, g.gh, 0);
+  g.line(0, g.H - 0.3, g.W, g.H - 0.3, 0);
+  ornament(o, g);
+  if (o.stringCourses) mw.stringCourses(g);
+  if (o.dentils) mw.dentils(g);
+  if (o.parapetCaps) mw.parapetCap(g);
+  var bays = Math.max(1, Math.floor(g.W / o.bayW)), rb = g.W / bays, door = o.door ? Math.floor(r() * bays) : -1;
+  if (o.pilasters) mw.pilasters(g, bays, rb);
+  floors(r, o, g, bays, rb, win);
+  if (g.gh > 0) groundFloor(r, o, g, bays, rb, door);
+  if (o.fireEscape) { var fb = Math.floor(r() * bays); mw.fireEscape(g, fb * rb + rb * 0.25, (fb + 1) * rb - rb * 0.25); }
+  if (o.roof === 'gable') mw.gable(g); else if (o.roof === 'mansard') mw.mansard(g, r);
+  if (o.rooftops && o.roof !== 'gable') rooftops(r, g);
+  return { fills: fills, glows: glows, strokes: strokes };
 }
 
 /** A gap in the street wall in 3D: vacant lot, alley, or garage. Returns {strokes, width}. */
@@ -94,13 +136,13 @@ function gap(r, cam, S, off, gh) {
   return { strokes: strokes, width: W };
 }
 
-/** Street furniture along one side: kerb, road dashes, lamp posts, and trees from a branching rule. */
-function street(r, cam, S, L) {
+/** Street furniture along one side, each family behind its flag: kerb, road dashes, lamps, trees. */
+function street(r, cam, S, L, o) {
   var strokes = [];
   function P(d, h, e) { return cam(S.pt(d, h, e)); }
-  strokes.push([P(0, 0, 3), P(L, 0, 3)], [P(0, 0.15, 3), P(L, 0.15, 3)], [P(0, 0.15, 3.2), P(L, 0.15, 3.2)]);
-  for (var d = 3 + r() * 4; d < L; d += 4) strokes.push([P(d, 0, 9), P(Math.min(L, d + 2), 0, 9)]);
-  for (d = 5 + r() * 6; d < L; d += 13 + r() * 5) {
+  if (o.kerb) strokes.push([P(0, 0, 3), P(L, 0, 3)], [P(0, 0.15, 3), P(L, 0.15, 3)], [P(0, 0.15, 3.2), P(L, 0.15, 3.2)]);
+  if (o.roadDashes) for (var d = 3 + r() * 4; d < L; d += 4) strokes.push([P(d, 0, 9), P(Math.min(L, d + 2), 0, 9)]);
+  if (o.lamps) for (d = 5 + r() * 6; d < L; d += 13 + r() * 5) {
     strokes.push([P(d, 0, 2.5), P(d, 5.2, 2.5)], [P(d, 5.2, 2.5), P(d, 5.2, 1.7)], [P(d, 5.2, 1.7), P(d, 4.8, 1.7)]);
     strokes.push([P(d - 0.25, 4.8, 1.7), P(d + 0.25, 4.8, 1.7)], [P(d - 0.25, 4.8, 1.7), P(d - 0.15, 4.4, 1.7)], [P(d + 0.25, 4.8, 1.7), P(d + 0.15, 4.4, 1.7)]);
   }
@@ -109,7 +151,7 @@ function street(r, cam, S, L) {
     strokes.push([P(d, h, 4.5), P(d2, h2, 4.5)]);
     if (depth > 0) { var k = 2 + (r() < 0.4 ? 1 : 0); for (var i = 0; i < k; i++) branch(d2, h2, ang + (r() - 0.5) * 1.3, len * (0.6 + r() * 0.15), depth - 1); }
   }
-  for (d = 8 + r() * 8; d < L; d += 12 + r() * 10) if (r() < 0.7) { strokes.push([P(d, 0, 4.5), P(d, 2.2, 4.5)]); branch(d, 2.2, (r() - 0.5) * 0.3, 1.4 + r() * 0.6, 4); }
+  if (o.trees) for (d = 8 + r() * 8; d < L; d += 12 + r() * 10) if (r() < 0.7) { strokes.push([P(d, 0, 4.5), P(d, 2.2, 4.5)]); branch(d, 2.2, (r() - 0.5) * 0.3, 1.4 + r() * 0.6, 4); }
   return strokes;
 }
 
@@ -119,33 +161,54 @@ function backRow(r, cam, S, L) {
   while (off < L + 14) {
     var w = 8 + Math.floor(r() * 12), fl = 8 + Math.floor(r() * 14);
     var b = building(r, cam, plane, { off: off, width: w, floors: fl, floorH: 3, groundH: 0, bayW: 3, window: 'rect', door: false });
-    out.push({ fills: b.fills, strokes: b.strokes });
+    out.push({ fills: b.fills, glows: b.glows, strokes: b.strokes });
     off += w + (r() < 0.4 ? 3 : 0);
   }
   return out;
 }
 
+/** The window family pool allowed by the flags; rect when every family is off. */
+function windowPool(o) {
+  var pool = [];
+  if (o.winRect) pool.push('rect'); if (o.winArch) pool.push('arch'); if (o.winTall) pool.push('tall');
+  if (o.winPaired) pool.push('paired'); if (o.winGrid) pool.push('grid');
+  return pool.length ? pool : ['rect'];
+}
+
+/** Per-building choices drawn from the flags: which ornament, trim, roof, and extras this one gets. */
+function buildingRecipe(r, o, off, width, floors, floorH, groundH) {
+  var roof = 'flat';
+  if (o.gables && r() < 0.3) roof = 'gable'; else if (o.mansards && r() < 0.3) roof = 'mansard';
+  return {
+    off: off, width: width, floors: floors, floorH: floorH, groundH: groundH, bayW: 2.4 + r() * 1.6, window: pick(r, windowPool(o)), door: true,
+    rooftops: o.rooftops, roof: roof,
+    balconies: o.balconies && r() < 0.5, awnings: o.awnings && r() < 0.5,
+    brackets: o.brackets && r() < 0.5, quoins: o.quoins && r() < 0.35, rustication: o.rustication && r() < 0.4, keystones: o.keystones,
+    architraves: o.architraves && r() < 0.5, lintels: o.lintels && r() < 0.5, shutters: o.shutters && r() < 0.4, pediments: o.pediments && r() < 0.35,
+    stringCourses: o.stringCourses && r() < 0.6, dentils: o.dentils && r() < 0.5, pilasters: o.pilasters && r() < 0.4, transoms: o.transoms && r() < 0.6,
+    parapetCaps: o.parapetCaps && r() < 0.7, fireEscape: o.fireEscapes && r() < 0.35
+  };
+}
+
 /** The front row of one side: buildings and gaps, each tagged with its offset for sorting. */
-function frontRow(r, cam, S, L, full) {
-  var front = [], off = 0, i = 0, types = ['rect', 'arch', 'tall', 'paired', 'grid'];
+function frontRow(r, cam, S, L, o) {
+  var front = [], off = 0, i = 0;
   while (off < L) {
     var groundH = 3.6 + r() * 1.2;
-    if (i > 0 && r() < 0.28) { var g = gap(r, cam, S, off, groundH); front.push({ strokes: g.strokes, off: off }); off += g.width; i++; continue; }
-    var tower = r() < (full ? 0.3 : 0.18), floors = tower ? (full ? 12 : 9) + Math.floor(r() * (full ? 8 : 5)) : 4 + Math.floor(r() * 8);
+    if (o.gaps && i > 0 && r() < 0.28) { var g = gap(r, cam, S, off, groundH); front.push({ strokes: g.strokes, off: off }); off += g.width; i++; continue; }
+    var tower = o.towers && r() < (o.closeCamera ? 0.3 : 0.18), floors = tower ? (o.closeCamera ? 12 : 9) + Math.floor(r() * (o.closeCamera ? 8 : 5)) : 4 + Math.floor(r() * 8);
     var floorH = 2.8 + r() * 0.8, width = 10 + Math.floor(r() * 14);
-    var base = { off: off, width: width, floors: floors, floorH: floorH, groundH: groundH, bayW: 2.4 + r() * 1.6, window: pick(r, types), door: true,
-      roofscape: true, balconies: full && r() < 0.5, awnings: full && r() < 0.5, brackets: r() < 0.5, quoins: r() < 0.35, rustication: r() < 0.4 };
-    var parts = [];
-    if (full && floors >= 6 && r() < 0.35) {
+    var base = buildingRecipe(r, o, off, width, floors, floorH, groundH), parts = [];
+    if (o.setbacks && floors >= 6 && r() < 0.35) {
       var lower = 3 + Math.floor(r() * (floors - 4)), inset = width * (0.1 + r() * 0.12);
-      var lo = Object.assign({}, base, { floors: lower, roofscape: false });
-      var hi = Object.assign({}, base, { off: off + inset, width: width - 2 * inset, floors: floors - lower, groundH: 0, door: false, h0: groundH + lower * floorH, awnings: false, rustication: false });
+      var lo = Object.assign({}, base, { floors: lower, rooftops: false, roof: 'flat' });
+      var hi = Object.assign({}, base, { off: off + inset, width: width - 2 * inset, floors: floors - lower, groundH: 0, door: false, h0: groundH + lower * floorH, awnings: false, rustication: false, transoms: false });
       parts.push(building(r, cam, S, hi)); parts.push(building(r, cam, S, lo));
     } else parts.push(building(r, cam, S, base));
-    parts.forEach(function (bd) { front.push({ fills: bd.fills, strokes: bd.strokes, off: off }); });
+    parts.forEach(function (bd) { front.push({ fills: bd.fills, glows: bd.glows, strokes: bd.strokes, off: off }); });
     off += width; i++;
   }
-  front.push({ strokes: street(r, cam, S, L), off: -1 });
+  front.push({ strokes: street(r, cam, S, L, o), off: -1 });
   return front;
 }
 
@@ -167,20 +230,26 @@ function fitToRegion(items, cornerPt, R) {
     });
     return out;
   }
-  return items.map(function (it) { return { fills: (it.fills || []).map(function (poly) { return poly.map(fitp); }), strokes: clip(it.strokes) }; });
+  return items.map(function (it) {
+    return {
+      fills: (it.fills || []).map(function (poly) { return poly.map(fitp); }),
+      glows: (it.glows || []).map(function (gw) { return { poly: gw.poly.map(fitp), k: gw.k }; }),
+      strokes: clip(it.strokes)
+    };
+  });
 }
 
-/** The street corner. r: generator. R: region {x, y, w, h}. opts: pitch (three-point), full (crowded recipe).
-    Returns items for renderTo, drawIn, or bounce. */
+/** The street corner. r: generator. R: region {x, y, w, h}. opts: any CORNER_OPTIONS flags, plus the
+    shorthands pitch and full. Returns items for renderTo, drawIn, or bounce. */
 export function corner4(r, R, opts) {
-  opts = opts || {};
-  var full = !!opts.full;
-  var A = (full ? 9 : 14) + r() * 12, B = (full ? 9 : 14) + r() * 12, eye = r() < (full ? 0.7 : 0.85) ? 1.7 : 5 + r() * 9;
-  var C = [-A, -B, eye], T = [8 + r() * 12, 5 + r() * 8, eye], pitch = opts.pitch ? 0.18 + r() * 0.22 : 0;
+  var o = cornerOptions(opts), near = o.closeCamera;
+  var A = near ? 9 : 14, B = near ? 9 : 14, eye = 1.7;
+  if (o.randomCamera) { A += r() * 12; B += r() * 12; eye = r() < (near ? 0.7 : 0.85) ? 1.7 : 5 + r() * 9; } else { A += 6; B += 6; }
+  var C = [-A, -B, eye], T = [8 + (o.randomCamera ? r() * 12 : 6), 5 + (o.randomCamera ? r() * 8 : 4), eye], pitch = o.pitch ? 0.18 + r() * 0.22 : 0;
   var cam = pinhole(C, T, pitch);
   var sides = [[side(false), 26 + r() * 20], [side(true), 44 + r() * 30]], items = [], front = [];
-  if (full) sides.forEach(function (sd) { backRow(r, cam, sd[0], sd[1]).forEach(function (it) { items.push(it); }); });
-  sides.forEach(function (sd) { frontRow(r, cam, sd[0], sd[1], full).forEach(function (it) { front.push(it); }); });
+  if (o.backRow) sides.forEach(function (sd) { backRow(r, cam, sd[0], sd[1]).forEach(function (it) { items.push(it); }); });
+  sides.forEach(function (sd) { frontRow(r, cam, sd[0], sd[1], o).forEach(function (it) { front.push(it); }); });
   front.sort(function (a, b) { return b.off - a.off; });
   front.forEach(function (it) { items.push(it); });
   return fitToRegion(items, cam([0, 0, 0]), R);

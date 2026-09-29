@@ -12,7 +12,7 @@
     {
       "name": "procedural-line-renderings",
       "source": "./",
-      "description": "Procedural architectural line drawings from real geometry: skill plus two Web Components.",
+      "description": "Procedural architectural line drawings from real geometry: skill plus five Web Components, every feature a flag.",
       "version": "0.1.0",
       "category": "design"
     }

@@ -1,7 +1,7 @@
 {
   "name": "@dmg-venture-studio/procedural-line-renderings",
   "version": "0.1.0",
-  "description": "Procedural architectural line drawings as dependency-free Web Components: a street corner through a pinhole camera and an axonometric massing model, seeded, plotted in like a pen plotter.",
+  "description": "Procedural architectural line drawings as dependency-free Web Components: a pinhole-camera street corner, axonometric massing, a Wave Function Collapse skyline, a truss, and a floor plan, seeded, plotted in like a pen plotter, every feature a flag.",
   "type": "module",
   "main": "dist/procedural-line-renderings.js",
   "module": "src/index.js",
